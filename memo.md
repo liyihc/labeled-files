@@ -1,7 +1,2 @@
-可能是迫于C++的垃圾生态，QT自带文件管理2333，相当于python的pathlib模块
-
-```python3
-fileInfo = QtCore.QFileInfo(path)
-iconProvider = QtGui.QFileIconProvider()
-icon = iconProvider.icon(fileInfo)
-```
+- 还需要做一键为选中的文件设置标签
+- 快捷键设置，例如多处的回车确认
