@@ -24,7 +24,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(445, 511)
+        MainWindow.resize(592, 511)
         self.openWorkSpaceAction = QAction(MainWindow)
         self.openWorkSpaceAction.setObjectName(u"openWorkSpaceAction")
         self.centralwidget = QWidget(MainWindow)
@@ -43,13 +43,18 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout.addWidget(self.sortComboBox)
 
+        self.searchPushButton = QPushButton(self.centralwidget)
+        self.searchPushButton.setObjectName(u"searchPushButton")
+
+        self.horizontalLayout.addWidget(self.searchPushButton)
+
 
         self.verticalLayout.addLayout(self.horizontalLayout)
 
-        self.listVerticalLayout = QVBoxLayout()
-        self.listVerticalLayout.setObjectName(u"listVerticalLayout")
+        self.fileVerticalLayout = QVBoxLayout()
+        self.fileVerticalLayout.setObjectName(u"fileVerticalLayout")
 
-        self.verticalLayout.addLayout(self.listVerticalLayout)
+        self.verticalLayout.addLayout(self.fileVerticalLayout)
 
         self.newFolderPushButton = QPushButton(self.centralwidget)
         self.newFolderPushButton.setObjectName(u"newFolderPushButton")
@@ -59,7 +64,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 445, 22))
+        self.menubar.setGeometry(QRect(0, 0, 592, 22))
         self.menu = QMenu(self.menubar)
         self.menu.setObjectName(u"menu")
         MainWindow.setMenuBar(self.menubar)
@@ -78,6 +83,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Labeled files", None))
         self.openWorkSpaceAction.setText(QCoreApplication.translate("MainWindow", u"\u6253\u5f00\u5de5\u4f5c\u533a", None))
+        self.searchPushButton.setText(QCoreApplication.translate("MainWindow", u"\u641c\u7d22", None))
         self.newFolderPushButton.setText(QCoreApplication.translate("MainWindow", u"\u65b0\u5efa\u6587\u4ef6\u5939", None))
         self.menu.setTitle(QCoreApplication.translate("MainWindow", u"\u6587\u4ef6", None))
     # retranslateUi

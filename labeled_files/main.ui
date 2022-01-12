@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>445</width>
+    <width>592</width>
     <height>511</height>
    </rect>
   </property>
@@ -23,10 +23,17 @@
       <item>
        <widget class="QComboBox" name="sortComboBox"/>
       </item>
+      <item>
+       <widget class="QPushButton" name="searchPushButton">
+        <property name="text">
+         <string>搜索</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
     <item>
-     <layout class="QVBoxLayout" name="listVerticalLayout"/>
+     <layout class="QVBoxLayout" name="fileVerticalLayout"/>
     </item>
     <item>
      <widget class="QPushButton" name="newFolderPushButton">
@@ -42,7 +49,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>445</width>
+     <width>592</width>
      <height>22</height>
     </rect>
    </property>
