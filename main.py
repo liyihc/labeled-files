@@ -5,5 +5,6 @@ from labeled_files.mainUiPy import Window
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])
     win = Window()
+    win.search()
     win.show()
     sys.exit(app.exec())

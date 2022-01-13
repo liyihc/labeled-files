@@ -1,4 +1,5 @@
 from __future__ import annotations
+import builtins
 from os import stat
 import random
 import shutil
@@ -17,7 +18,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from .mainUi import Ui_MainWindow
 
-SQLITE_NAME = "LABELED_FILES.sqlite3"
+from .setting import Setting, Config, SQLITE_NAME
 
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -38,11 +39,15 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             action.triggered.connect(partial(self.setting.set_root, path))
             self.menu.addAction(action)
 
+        self.tagLineEdit.keyPressEvent = self.check_complete
+        self.setting.lineedits.append(self.tagLineEdit)
         self.table = FileTable(self.setting, self)
         self.fileVerticalLayout.addWidget(self.table)
 
+        self.tagListWidget.itemClicked.connect(self.remove_tag)
         self.searchPushButton.clicked.connect(self.search)
         self.openWorkSpaceAction.triggered.connect(self.open_workspace)
+        self.delPushButton.clicked.connect(self.table.del_file)
 
         default = self.config.workspaces.get(self.config.default, None)
         if default:
@@ -56,29 +61,50 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def search(self):
         conn = self.setting.conn
-        keywords = self.searchLineEdit.text().split()
-        if len(keywords):
+        keyword = self.searchLineEdit.text().strip()
+        tags = []
+        for i in range(self.tagListWidget.count()):
+            tags.append(self.tagListWidget.item(i).text())
+
+        if len(tags):
             file_ids = reduce(lambda a, b: a & b, map(
-                lambda kw: {v for v, in conn.execute("SELECT file_id FROM file_labels WHERE label = ?", (kw,))}, keywords))
+                lambda tag: {v for v, in conn.execute("SELECT file_id FROM file_labels WHERE label = ?", (tag,))}, tags))
+        elif keyword:
+            file_ids = [f for f, in conn.execute(
+                f'SELECT id FROM files WHERE name like "%{keyword}%" ORDER BY ctime')]
         else:
             file_ids = [f for f, in conn.execute(
                 "SELECT id FROM files ORDER BY ctime desc LIMIT 50")]
         file_ids = ','.join(str(f) for f in file_ids)
 
         def get_file(args):
-            id, name, path, ctime, _, description = args
-            path = pathlib.Path(path)
-            if not path.is_absolute():
-                path = self.root_path.joinpath(path)
+            id, name, path, ctime, description = args
             tags = [tag for tag, in conn.execute(
                 "SELECT label FROM file_labels WHERE file_id = ?", (id,))]
-            return File(id, name, str(path), tags, datetime.fromisoformat(ctime), datetime.fromtimestamp(path.stat().st_mtime), description)
+            return File(id, name, str(path), tags, datetime.fromisoformat(ctime), description)
 
         files: List[File] = list(map(get_file, conn.execute(
             f"SELECT * FROM files WHERE id in ({file_ids})")))
 
-        files.sort(key=lambda f: f.mtime, reverse=True)
+        files.sort(key=lambda f: f.ctime, reverse=True)
         self.table.showFiles(files)
+
+    def check_complete(self, e: QtGui.QKeyEvent):
+        if self.tagLineEdit.completer() is None:
+            self.tagLineEdit.setCompleter(self.setting.completer)
+        if e.key() == 32:
+            completer = self.tagLineEdit.completer()
+            if completer.currentRow() >= 0:
+                self.tagListWidget.addItem(QtWidgets.QListWidgetItem(self.style().standardIcon(
+                    QtWidgets.QStyle.SP_TitleBarCloseButton), completer.currentCompletion()))
+                self.tagLineEdit.setText("")
+                e.ignore()
+                return
+        QtWidgets.QLineEdit.keyPressEvent(self.tagLineEdit, e)
+
+    def remove_tag(self, item: QtWidgets.QListWidgetItem):
+        ind = self.tagListWidget.indexFromItem(item)
+        self.tagListWidget.takeItem(ind.row())
 
     def __del__(self):
         conn = self.setting.conn
@@ -99,10 +125,10 @@ class FileTable(QtWidgets.QTableWidget):
 
         self.setHorizontalScrollMode(
             QtWidgets.QAbstractItemView.ScrollMode.ScrollPerPixel)
-        self.setColumnCount(5)
-        self.setHorizontalHeaderLabels(["文件名", "时间", "修改时间", "标签", "描述"])
+        self.setColumnCount(4)
+        self.setHorizontalHeaderLabels(["文件名", "时间", "标签", "描述"])
         h = self.horizontalHeader()
-        for i, size in enumerate([200, 120, 100]):
+        for i, size in enumerate([150, 110, 200]):
             h.resizeSection(i, size)
 
         self.files: List[File] = []
@@ -110,24 +136,28 @@ class FileTable(QtWidgets.QTableWidget):
         self.wins = []
         self.setting = setting
 
-    def showFiles(self, results: List[File]):
+    def showFiles(self, results: List[File] = None):
         self.clearContents()
         self.setRowCount(0)
-        self.files = results
+        if results:
+            self.files = results
+        else:
+            results = self.files
         self.setRowCount(len(results))
         icon_provider = QtWidgets.QFileIconProvider()
         for row, file in enumerate(results):
-            p = QtCore.QFileInfo(file.path)
+            p = pathlib.Path(file.path)
+            if not p.is_absolute():
+                p = self.setting.root_path.joinpath(p)
+            p = QtCore.QFileInfo(p)
             icon = icon_provider.icon(p)
             item = QtWidgets.QTableWidgetItem(icon, file.name)
             self.setItem(row, 0, item)
             self.setItem(row, 1, QtWidgets.QTableWidgetItem(
                 file.ctime.strftime("%y%m%d %H:%M:%S")))
             self.setItem(row, 2, QtWidgets.QTableWidgetItem(
-                file.mtime.strftime("%y%m%d %H:%M:%S")))
-            self.setItem(row, 3, QtWidgets.QTableWidgetItem(
                 ' '.join('#' + tag for tag in file.tags)))
-            self.setItem(row, 4, QtWidgets.QTableWidgetItem(file.description))
+            self.setItem(row, 3, QtWidgets.QTableWidgetItem(file.description))
 
     def dragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
         # 或者图片、在线文件也可进行下载
@@ -160,6 +190,7 @@ class FileTable(QtWidgets.QTableWidget):
                         if not target_p.exists():
                             break
                     shutil.move(p, target_p)
+                    target_p = target_p.relative_to(self.setting.root_path)
                     return target_p
 
             case QtCore.Qt.DropAction.CopyAction:
@@ -173,21 +204,30 @@ class FileTable(QtWidgets.QTableWidget):
                         shutil.copytree(p, target_p)
                     else:
                         shutil.copy(p, target_p)
+                    target_p = target_p.relative_to(self.setting.root_path)
                     return target_p
             case QtCore.Qt.DropAction.LinkAction:
                 def func(p):
                     return p
 
+        conn = self.setting.conn
+        files = []
         for file in e.mimeData().text().splitlines():
             p = pathlib.Path(file.removeprefix("file:///"))
             stat = p.stat()
             f = File(None, p.name, None, [], datetime.fromtimestamp(
-                stat.st_ctime), datetime.fromtimestamp(stat.st_mtime), "")
+                stat.st_ctime), "")
             p = func(p)
             f.path = str(p)
-            cur = self.setting.conn.execute(
-                f"INSERT INTO files(name, path, ctime, mtime, description) VALUES(?,?,?,?,?)",
-                (f.name, f.path, str(f.ctime), str(f.mtime), f.description))
+            with conn:
+                cur = conn.execute(
+                    f"INSERT INTO files(name, path, ctime, description) VALUES(?,?,?,?)",
+                    (f.name, f.path, str(f.ctime), f.description))
+                f.id = cur.lastrowid
+            files.append(f)
+
+        files.extend(self.files)
+        self.showFiles(files)
 
         e.ignore()
 
@@ -207,67 +247,37 @@ class FileTable(QtWidgets.QTableWidget):
         menu.popup(e.globalPos())
 
     def open_file(self, item: QtWidgets.QTableWidgetItem):
-        return QtGui.QDesktopServices.openUrl(
-            QtCore.QUrl.fromLocalFile(self.files[item.row()].path))
+        p = self.files[item.row()].path
+        path = pathlib.Path(p)
+        if not path.is_absolute():
+            path = self.setting.root_path.joinpath(path)
+        return QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(path))
 
     def edit_file(self, item: QtWidgets.QTableWidgetItem):
         win = FileWin(self.setting, self.files[item.row()])
-        win.confirmed.connect(self.confirm_file)
         win.show()
         self.wins.append(win)
 
-    def confirm_file(self, file: File):
+    def del_file(self):
+        rows = sorted({item.row() for item in self.selectedItems()})
+        ids = []
+        names = []
         conn = self.setting.conn
-        conn.execute(
-            "UPDATE files SET name = ?, path = ?, ctime = ?, description = ? WHERE id = ?", (file.name, file.path, str(file.ctime), file.description, file.id))
-        tags = set(tag for tag, in conn.execute(
-            "SELECT label FROM file_labels WHERE file_id = ?", (file.id,)))
-        new_tags = set(file.tags)
-        if tags != new_tags:
-            conn.executemany(
-                "INSERT INTO file_labels(file_id, label) VALUES(?,?)",
-                [(file.id, tag) for tag in new_tags - tags])
-            conn.executemany(
-                "DELETE FROM file_labels WHERE file_id = ? AND label = ?",
-                [(file.id, tag) for tag in tags - new_tags])
-
-
-@dataclass
-class Setting:
-    root_path: pathlib.Path = None
-    conn: sqlite3.Connection = None
-
-    def connect_to(self, path: Union[str, pathlib.Path]):
-        conn = sqlite3.connect(path)
-        conn.executescript("""
-CREATE TABLE IF NOT EXISTS file_labels(
-    label TEXT,
-    file_id INTEGER,
-    PRIMARY KEY(file_id, label));
-CREATE INDEX IF NOT EXISTS file_labels_label
-    ON file_labels(label, file_id);
-CREATE TABLE IF NOT EXISTS files(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    path TEXT,
-    ctime DATETIME,
-    mtime DATETIME,
-    description TEXT);
-CREATE INDEX IF NOT EXISTS files_name
-    ON files(name);
-CREATE INDEX IF NOT EXISTS files_ctime
-    ON files(ctime); 
-CREATE INDEX IF NOT EXISTS files_mtime
-    ON files(mtime); """)
-        self.conn = conn
-
-    def set_root(self, root: str):
-        if self.conn:
-            self.conn.close()
-        self.root_path = pathlib.Path(root)
-        self.connect_to(self.root_path.joinpath(SQLITE_NAME))
-
-
-class Config(pydantic.BaseModel):
-    default: str = ""
-    workspaces: Dict[str, pydantic.DirectoryPath] = {}
+        for row in rows:
+            f = self.files[row]
+            ids.append(f.id)
+            names.append(f.name)
+        match QtWidgets.QMessageBox.question(self, "是否删除以下文件？", "\n".join(names), QtWidgets.QMessageBox.Cancel, QtWidgets.QMessageBox.Ok):
+            case QtWidgets.QMessageBox.Ok:
+                with conn:
+                    conn.execute("DELETE FROM files WHERE id in (?)",
+                                 (",".join(str(id) for id in ids)))
+                    conn.execute("DELETE FROM file_labels WHERE file_id in (?)",
+                                 (",".join(str(id) for id in ids)))
+                    for i in reversed(rows):
+                        f = self.files.pop(i)
+                        p = pathlib.Path(f.path)
+                        if not p.is_absolute():
+                            p = self.setting.root_path.joinpath(p)
+                            p.unlink()
+                    self.showFiles()

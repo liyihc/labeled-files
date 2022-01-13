@@ -62,10 +62,20 @@ class Ui_MainWindow(object):
 
         self.formLayout.setWidget(2, QFormLayout.FieldRole, self.pathPushButton)
 
+        self.label_3 = QLabel(self.centralwidget)
+        self.label_3.setObjectName(u"label_3")
+
+        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.label_3)
+
         self.label = QLabel(self.centralwidget)
         self.label.setObjectName(u"label")
 
         self.formLayout.setWidget(4, QFormLayout.LabelRole, self.label)
+
+        self.tagLineEdit = QLineEdit(self.centralwidget)
+        self.tagLineEdit.setObjectName(u"tagLineEdit")
+
+        self.formLayout.setWidget(4, QFormLayout.FieldRole, self.tagLineEdit)
 
         self.label_2 = QLabel(self.centralwidget)
         self.label_2.setObjectName(u"label_2")
@@ -77,19 +87,9 @@ class Ui_MainWindow(object):
 
         self.formLayout.setWidget(5, QFormLayout.FieldRole, self.plainTextEdit)
 
-        self.tagPlainTextEdit = QPlainTextEdit(self.centralwidget)
-        self.tagPlainTextEdit.setObjectName(u"tagPlainTextEdit")
-        self.tagPlainTextEdit.setMaximumSize(QSize(16777215, 50))
-
-        self.formLayout.setWidget(4, QFormLayout.FieldRole, self.tagPlainTextEdit)
-
-        self.label_3 = QLabel(self.centralwidget)
-        self.label_3.setObjectName(u"label_3")
-
-        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.label_3)
-
         self.dateTimeEdit = QDateTimeEdit(self.centralwidget)
         self.dateTimeEdit.setObjectName(u"dateTimeEdit")
+        self.dateTimeEdit.setCalendarPopup(True)
 
         self.formLayout.setWidget(3, QFormLayout.FieldRole, self.dateTimeEdit)
 
@@ -131,10 +131,14 @@ class Ui_MainWindow(object):
         self.nameLabel.setText(QCoreApplication.translate("MainWindow", u"\u540d\u79f0", None))
         self.pathLabel.setText(QCoreApplication.translate("MainWindow", u"\u8def\u5f84", None))
         self.pathPushButton.setText(QCoreApplication.translate("MainWindow", u"\u6253\u5f00\u8def\u5f84", None))
+        self.label_3.setText(QCoreApplication.translate("MainWindow", u"\u65f6\u95f4", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"\u6807\u7b7e", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"\u63cf\u8ff0", None))
-        self.label_3.setText(QCoreApplication.translate("MainWindow", u"\u65f6\u95f4", None))
+        self.dateTimeEdit.setDisplayFormat(QCoreApplication.translate("MainWindow", u"yy/MM/dd HH:mm:ss", None))
         self.cancelPushButton.setText(QCoreApplication.translate("MainWindow", u"\u53d6\u6d88", None))
         self.confirmPushButton.setText(QCoreApplication.translate("MainWindow", u"\u786e\u8ba4", None))
+#if QT_CONFIG(shortcut)
+        self.confirmPushButton.setShortcut(QCoreApplication.translate("MainWindow", u"Return", None))
+#endif // QT_CONFIG(shortcut)
     # retranslateUi
 
