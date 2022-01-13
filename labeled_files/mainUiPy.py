@@ -1,24 +1,20 @@
 from __future__ import annotations
-import builtins
-from os import stat
+
+import os
+import pathlib
 import random
 import shutil
-from dataclasses import dataclass
+import subprocess
 from datetime import datetime
-import pydantic
-import enum
 from functools import partial, reduce
-import pathlib
-import sqlite3
 from typing import Dict, List, Set, Union
-
-from .fileUiPy import File, Window as FileWin
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
+from .fileUiPy import File
+from .fileUiPy import Window as FileWin
 from .mainUi import Ui_MainWindow
-
-from .setting import Setting, Config, SQLITE_NAME
+from .setting import SQLITE_NAME, Config, Setting
 
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -69,12 +65,16 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         if len(tags):
             file_ids = reduce(lambda a, b: a & b, map(
                 lambda tag: {v for v, in conn.execute("SELECT file_id FROM file_labels WHERE label = ?", (tag,))}, tags))
+            if keyword:
+                file_ids = ','.join(str(f) for f in file_ids)
+                file_ids = [f for f, in conn.execute(
+                    f'SELECT id FROM files WHERE name like "%{keyword}%" AND id in ({file_ids}) ORDER BY ctime DESC')]
         elif keyword:
             file_ids = [f for f, in conn.execute(
-                f'SELECT id FROM files WHERE name like "%{keyword}%" ORDER BY ctime')]
+                f'SELECT id FROM files WHERE name like "%{keyword}%" ORDER BY ctime DESC')]
         else:
             file_ids = [f for f, in conn.execute(
-                "SELECT id FROM files ORDER BY ctime desc LIMIT 50")]
+                "SELECT id FROM files ORDER BY ctime DESC LIMIT 50")]
         file_ids = ','.join(str(f) for f in file_ids)
 
         def get_file(args):
@@ -86,7 +86,6 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         files: List[File] = list(map(get_file, conn.execute(
             f"SELECT * FROM files WHERE id in ({file_ids})")))
 
-        files.sort(key=lambda f: f.ctime, reverse=True)
         self.table.showFiles(files)
 
     def check_complete(self, e: QtGui.QKeyEvent):
@@ -139,7 +138,7 @@ class FileTable(QtWidgets.QTableWidget):
     def showFiles(self, results: List[File] = None):
         self.clearContents()
         self.setRowCount(0)
-        if results:
+        if results is not None:
             self.files = results
         else:
             results = self.files
@@ -238,25 +237,31 @@ class FileTable(QtWidgets.QTableWidget):
             return
         menu = QtWidgets.QMenu(self)
         open = QtGui.QAction('open', self)
-        open.triggered.connect(lambda: self.open_file(item))
+        open.triggered.connect(partial(self.open_file, item))
         edit = QtGui.QAction('edit', self)
-        edit.triggered.connect(
-            lambda: self.edit_file(item)
-        )
-        menu.addActions([open, edit])
+        edit.triggered.connect(partial(self.edit_file, item))
+        path = QtGui.QAction('path', self)
+        path.triggered.connect(partial(self.file_path, item))
+        menu.addActions([open, edit, path])
         menu.popup(e.globalPos())
 
+    def get_file_by_index(self, ind):
+        return self.files[ind]
+
+    def get_path_by_index(self, ind):
+        return self.setting.get_absolute_path(self.get_file_by_index(ind).path)
+
     def open_file(self, item: QtWidgets.QTableWidgetItem):
-        p = self.files[item.row()].path
-        path = pathlib.Path(p)
-        if not path.is_absolute():
-            path = self.setting.root_path.joinpath(path)
-        return QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(path))
+        os.startfile(self.get_path_by_index(item.row()))
 
     def edit_file(self, item: QtWidgets.QTableWidgetItem):
-        win = FileWin(self.setting, self.files[item.row()])
+        win = FileWin(self.setting, self.get_file_by_index(item.row()))
         win.show()
         self.wins.append(win)
+
+    def file_path(self, item: QtWidgets.QTableWidgetItem):
+        subprocess.Popen(
+            f'explorer /select,"{self.get_path_by_index(item.row())}"')
 
     def del_file(self):
         rows = sorted({item.row() for item in self.selectedItems()})

@@ -1,4 +1,3 @@
-import dataclasses
 import pathlib
 import sqlite3
 from dataclasses import dataclass, field
@@ -51,6 +50,12 @@ CREATE INDEX IF NOT EXISTS files_ctime
             "SELECT DISTINCT label FROM file_labels")])
         for le in self.lineedits:
             le.setCompleter(self.completer)
+
+    def get_absolute_path(self, path: Union[str, pathlib.Path]) -> pathlib.Path:
+        path = pathlib.Path(path)
+        if path.is_absolute():
+            return path
+        return self.root_path.joinpath(path)
 
 
 class Config(pydantic.BaseModel):

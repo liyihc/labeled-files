@@ -1,9 +1,12 @@
 import copy
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime
-import sqlite3
-from typing import List, Set
-from PySide6 import QtWidgets, QtCore, QtGui
+from functools import partial
+from typing import List
+
+from PySide6 import QtCore, QtGui, QtWidgets
+
 from .fileUi import Ui_MainWindow
 from .setting import Setting
 
@@ -30,8 +33,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.nameLineEdit.setText(file.name)
         self.dateTimeEdit.setDateTime(file.ctime)
         self.pathPushButton.clicked.connect(
-            lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(file.path)))
-
+            partial(subprocess.Popen, f'explorer /select,"{setting.get_absolute_path(file.path)}"'))
         self.tagLineEdit.setText(
             " ".join(['#' + tag for tag in file.tags]))
 
