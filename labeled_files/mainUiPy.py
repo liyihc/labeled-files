@@ -84,7 +84,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             return File(id, name, str(path), tags, datetime.fromisoformat(ctime), description)
 
         files: List[File] = list(map(get_file, conn.execute(
-            f"SELECT * FROM files WHERE id in ({file_ids})")))
+            f"SELECT * FROM files WHERE id in ({file_ids}) ORDER BY ctime DESC")))
 
         self.table.showFiles(files)
 
@@ -276,9 +276,9 @@ class FileTable(QtWidgets.QTableWidget):
             case QtWidgets.QMessageBox.Ok:
                 with conn:
                     conn.execute("DELETE FROM files WHERE id in (?)",
-                                 (",".join(str(id) for id in ids)))
+                                 (",".join(str(id) for id in ids),))
                     conn.execute("DELETE FROM file_labels WHERE file_id in (?)",
-                                 (",".join(str(id) for id in ids)))
+                                 (",".join(str(id) for id in ids),))
                     for i in reversed(rows):
                         f = self.files.pop(i)
                         p = pathlib.Path(f.path)
