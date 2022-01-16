@@ -17,22 +17,23 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QFrame,
-    QHBoxLayout, QLineEdit, QListView, QListWidget,
-    QListWidgetItem, QMainWindow, QMenu, QMenuBar,
-    QPushButton, QSizePolicy, QStatusBar, QVBoxLayout,
+    QHBoxLayout, QHeaderView, QLineEdit, QListView,
+    QListWidget, QListWidgetItem, QMainWindow, QMenu,
+    QMenuBar, QPushButton, QSizePolicy, QSpacerItem,
+    QStatusBar, QTableWidget, QTableWidgetItem, QVBoxLayout,
     QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(592, 511)
+        MainWindow.resize(725, 511)
         self.openWorkSpaceAction = QAction(MainWindow)
         self.openWorkSpaceAction.setObjectName(u"openWorkSpaceAction")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        self.verticalLayout = QVBoxLayout(self.centralwidget)
-        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.searchLineEdit = QLineEdit(self.centralwidget)
@@ -56,16 +57,42 @@ class Ui_MainWindow(object):
         self.horizontalLayout.addWidget(self.searchPushButton)
 
 
-        self.verticalLayout.addLayout(self.horizontalLayout)
+        self.verticalLayout_2.addLayout(self.horizontalLayout)
 
-        self.tagListWidget = QListWidget(self.centralwidget)
-        self.tagListWidget.setObjectName(u"tagListWidget")
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.tagTableWidget = QTableWidget(self.centralwidget)
+        if (self.tagTableWidget.columnCount() < 2):
+            self.tagTableWidget.setColumnCount(2)
+        __qtablewidgetitem = QTableWidgetItem()
+        self.tagTableWidget.setHorizontalHeaderItem(0, __qtablewidgetitem)
+        __qtablewidgetitem1 = QTableWidgetItem()
+        self.tagTableWidget.setHorizontalHeaderItem(1, __qtablewidgetitem1)
+        self.tagTableWidget.setObjectName(u"tagTableWidget")
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.tagListWidget.sizePolicy().hasHeightForWidth())
-        self.tagListWidget.setSizePolicy(sizePolicy)
-        self.tagListWidget.setMaximumSize(QSize(16777215, 30))
+        sizePolicy.setHeightForWidth(self.tagTableWidget.sizePolicy().hasHeightForWidth())
+        self.tagTableWidget.setSizePolicy(sizePolicy)
+        self.tagTableWidget.setDragEnabled(True)
+        self.tagTableWidget.setDragDropMode(QAbstractItemView.DragOnly)
+        self.tagTableWidget.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.tagTableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.tagTableWidget.horizontalHeader().setStretchLastSection(True)
+        self.tagTableWidget.verticalHeader().setVisible(False)
+
+        self.horizontalLayout_2.addWidget(self.tagTableWidget)
+
+        self.verticalLayout = QVBoxLayout()
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.tagListWidget = QListWidget(self.centralwidget)
+        self.tagListWidget.setObjectName(u"tagListWidget")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.tagListWidget.sizePolicy().hasHeightForWidth())
+        self.tagListWidget.setSizePolicy(sizePolicy1)
+        self.tagListWidget.setMaximumSize(QSize(16777215, 40))
         palette = QPalette()
         brush = QBrush(QColor(0, 0, 0, 255))
         brush.setStyle(Qt.SolidPattern)
@@ -186,15 +213,30 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addLayout(self.fileVerticalLayout)
 
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer)
+
         self.delPushButton = QPushButton(self.centralwidget)
         self.delPushButton.setObjectName(u"delPushButton")
 
-        self.verticalLayout.addWidget(self.delPushButton)
+        self.horizontalLayout_3.addWidget(self.delPushButton)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_3)
+
+
+        self.horizontalLayout_2.addLayout(self.verticalLayout)
+
+
+        self.verticalLayout_2.addLayout(self.horizontalLayout_2)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 592, 22))
+        self.menubar.setGeometry(QRect(0, 0, 725, 22))
         self.menu = QMenu(self.menubar)
         self.menu.setObjectName(u"menu")
         MainWindow.setMenuBar(self.menubar)
@@ -220,6 +262,10 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(shortcut)
         self.searchPushButton.setShortcut(QCoreApplication.translate("MainWindow", u"Return", None))
 #endif // QT_CONFIG(shortcut)
+        ___qtablewidgetitem = self.tagTableWidget.horizontalHeaderItem(0)
+        ___qtablewidgetitem.setText(QCoreApplication.translate("MainWindow", u"\u6807\u7b7e", None));
+        ___qtablewidgetitem1 = self.tagTableWidget.horizontalHeaderItem(1)
+        ___qtablewidgetitem1.setText(QCoreApplication.translate("MainWindow", u"\u6b21\u6570", None));
         self.delPushButton.setText(QCoreApplication.translate("MainWindow", u"\u5220\u9664", None))
 #if QT_CONFIG(shortcut)
         self.delPushButton.setShortcut(QCoreApplication.translate("MainWindow", u"Del", None))

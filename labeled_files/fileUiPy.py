@@ -22,6 +22,7 @@ class File:
 
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
+    reshow = QtCore.Signal(int)
 
     def __init__(self, setting: Setting, file: File) -> None:
         super().__init__()
@@ -65,4 +66,5 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                     [(file.id, tag) for tag in tags - new_tags])
 
         self.setting.update_completer()
+        self.reshow.emit(file.id)
         self.close()

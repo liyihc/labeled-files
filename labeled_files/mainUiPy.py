@@ -4,6 +4,7 @@ import os
 import pathlib
 import random
 import shutil
+import sqlite3
 import subprocess
 from datetime import datetime
 from functools import partial, reduce
@@ -35,6 +36,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             action.triggered.connect(partial(self.setting.set_root, path))
             self.menu.addAction(action)
 
+        self.tagTableWidget.mimeData = tag_mime_data
         self.tagLineEdit.keyPressEvent = self.check_complete
         self.setting.lineedits.append(self.tagLineEdit)
         self.table = FileTable(self.setting, self)
@@ -48,6 +50,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         default = self.config.workspaces.get(self.config.default, None)
         if default:
             self.setting.set_root(default)
+        self.last_keyword = None
 
     def open_workspace(self):
         ret = QtWidgets.QFileDialog.getExistingDirectory(
@@ -56,7 +59,6 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             self.setting.set_root(ret)
 
     def search(self):
-        conn = self.setting.conn
         keyword = self.searchLineEdit.text().strip()
         if self.tagLineEdit.text():
             self.complete()
@@ -64,6 +66,30 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         for i in range(self.tagListWidget.count()):
             tags.append(self.tagListWidget.item(i).text())
 
+        if self.last_keyword != keyword:
+            self.search_tag(keyword)
+        self.search_file(keyword, tags)
+        self.last_keyword = keyword
+
+    def search_tag(self, keyword):
+        conn = self.setting.conn
+        labels = conn.execute(
+            "SELECT label, COUNT(*) FROM file_labels GROUP BY label ORDER BY COUNT(*) DESC").fetchall()
+        if keyword:
+            labels = [(label, cnt)
+                      for label, cnt in labels if keyword in label]
+
+        self.tagTableWidget.setRowCount(0)
+        self.tagTableWidget.clearContents()
+        self.tagTableWidget.setRowCount(len(labels))
+        for row, (label, cnt) in enumerate(labels):
+            self.tagTableWidget.setItem(
+                row, 0, QtWidgets.QTableWidgetItem(label))
+            self.tagTableWidget.setItem(
+                row, 1, QtWidgets.QTableWidgetItem(str(cnt)))
+
+    def search_file(self, keyword, tags):
+        conn = self.setting.conn
         if len(tags):
             file_ids = reduce(lambda a, b: a & b, map(
                 lambda tag: {v for v, in conn.execute("SELECT file_id FROM file_labels WHERE label = ?", (tag,))}, tags))
@@ -79,14 +105,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                 "SELECT id FROM files ORDER BY vtime DESC LIMIT 50")]
         file_ids = ','.join(str(f) for f in file_ids)
 
-        def get_file(args):
-            id, name, path, ctime, vtime, description = args
-            tags = [tag for tag, in conn.execute(
-                "SELECT label FROM file_labels WHERE file_id = ?", (id,))]
-            return File(id, name, str(path), tags, datetime.fromisoformat(ctime), description)
-
-        files: List[File] = list(map(get_file, conn.execute(
-            f"SELECT * FROM files WHERE id in ({file_ids}) ORDER BY vtime DESC")))
+        files: List[File] = [get_file(conn, record) for record in conn.execute(
+            f"SELECT * FROM files WHERE id in ({file_ids}) ORDER BY vtime DESC")]
 
         self.table.showFiles(files)
 
@@ -149,18 +169,23 @@ class FileTable(QtWidgets.QTableWidget):
         self.setRowCount(len(results))
         icon_provider = QtWidgets.QFileIconProvider()
         for row, file in enumerate(results):
-            p = pathlib.Path(file.path)
-            if not p.is_absolute():
-                p = self.setting.root_path.joinpath(p)
-            p = QtCore.QFileInfo(p)
-            icon = icon_provider.icon(p)
-            item = QtWidgets.QTableWidgetItem(icon, file.name)
-            self.setItem(row, 0, item)
-            self.setItem(row, 1, QtWidgets.QTableWidgetItem(
-                file.ctime.strftime("%y%m%d %H:%M:%S")))
-            self.setItem(row, 2, QtWidgets.QTableWidgetItem(
-                ' '.join('#' + tag for tag in file.tags)))
-            self.setItem(row, 3, QtWidgets.QTableWidgetItem(file.description))
+            self.showFileAt(row, file, icon_provider)
+
+    def showFileAt(self, row, f: File, icon_provider: QtWidgets.QFileIconProvider = None):
+        if not icon_provider:
+            icon_provider = QtWidgets.QFileIconProvider()
+        p = pathlib.Path(f.path)
+        if not p.is_absolute():
+            p = self.setting.root_path.joinpath(p)
+        p = QtCore.QFileInfo(p)
+        icon = icon_provider.icon(p)
+        item = QtWidgets.QTableWidgetItem(icon, f.name)
+        self.setItem(row, 0, item)
+        self.setItem(row, 1, QtWidgets.QTableWidgetItem(
+            f.ctime.strftime("%y%m%d %H:%M:%S")))
+        self.setItem(row, 2, QtWidgets.QTableWidgetItem(
+            ' '.join('#' + tag for tag in f.tags)))
+        self.setItem(row, 3, QtWidgets.QTableWidgetItem(f.description))
 
     def dragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
         # 或者图片、在线文件也可进行下载
@@ -268,7 +293,18 @@ class FileTable(QtWidgets.QTableWidget):
     def edit_file(self, item: QtWidgets.QTableWidgetItem):
         win = FileWin(self.setting, self.get_file_by_index(item.row()))
         win.show()
+        win.reshow.connect(self.reshow)
         self.wins.append(win)
+
+    def reshow(self, file_id):
+        conn = self.setting.conn
+        f = get_file(conn, conn.execute(
+            "SELECT * FROM files WHERE id = ? LIMIT 1", (file_id,)).fetchone())
+        for ind, rep in enumerate(self.files):
+            if rep.id == file_id:
+                self.files[ind] = f
+                self.showFileAt(ind, f)
+                break
 
     def file_path(self, item: QtWidgets.QTableWidgetItem):
         subprocess.Popen(
@@ -301,3 +337,18 @@ class FileTable(QtWidgets.QTableWidget):
                             p = self.setting.root_path.joinpath(p)
                             p.unlink()
                     self.showFiles()
+
+
+def get_file(conn: sqlite3.Connection, args):
+    id, name, path, ctime, vtime, description = args
+    tags = [tag for tag, in conn.execute(
+        "SELECT label FROM file_labels WHERE file_id = ?", (id,))]
+    return File(id, name, str(path), tags, datetime.fromisoformat(ctime), description)
+
+
+def tag_mime_data(items: List[QtWidgets.QTableWidgetItem]):
+    for item in items:
+        if not item.column():
+            data = QtCore.QMimeData()
+            data.setText(item.text())
+            return data
