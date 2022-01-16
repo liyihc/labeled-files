@@ -31,11 +31,15 @@ CREATE TABLE IF NOT EXISTS files(
     name TEXT,
     path TEXT,
     ctime DATETIME,
+    vtime DATETIME,
     description TEXT);
 CREATE INDEX IF NOT EXISTS files_name
     ON files(name);
 CREATE INDEX IF NOT EXISTS files_ctime
-    ON files(ctime);""")
+    ON files(ctime);
+CREATE INDEX IF NOT EXISTS files_vtime
+    ON files(vtime);
+    """)
         self.conn = conn
 
     def set_root(self, root: str):

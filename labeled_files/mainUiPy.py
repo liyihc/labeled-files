@@ -58,6 +58,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def search(self):
         conn = self.setting.conn
         keyword = self.searchLineEdit.text().strip()
+        if self.tagLineEdit.text():
+            self.complete()
         tags = []
         for i in range(self.tagListWidget.count()):
             tags.append(self.tagListWidget.item(i).text())
@@ -74,32 +76,34 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                 f'SELECT id FROM files WHERE name like "%{keyword}%" ORDER BY ctime DESC')]
         else:
             file_ids = [f for f, in conn.execute(
-                "SELECT id FROM files ORDER BY ctime DESC LIMIT 50")]
+                "SELECT id FROM files ORDER BY vtime DESC LIMIT 50")]
         file_ids = ','.join(str(f) for f in file_ids)
 
         def get_file(args):
-            id, name, path, ctime, description = args
+            id, name, path, ctime, vtime, description = args
             tags = [tag for tag, in conn.execute(
                 "SELECT label FROM file_labels WHERE file_id = ?", (id,))]
             return File(id, name, str(path), tags, datetime.fromisoformat(ctime), description)
 
         files: List[File] = list(map(get_file, conn.execute(
-            f"SELECT * FROM files WHERE id in ({file_ids}) ORDER BY ctime DESC")))
+            f"SELECT * FROM files WHERE id in ({file_ids}) ORDER BY vtime DESC")))
 
         self.table.showFiles(files)
 
     def check_complete(self, e: QtGui.QKeyEvent):
-        if self.tagLineEdit.completer() is None:
-            self.tagLineEdit.setCompleter(self.setting.completer)
         if e.key() == 32:
-            completer = self.tagLineEdit.completer()
-            if completer.currentRow() >= 0:
-                self.tagListWidget.addItem(QtWidgets.QListWidgetItem(self.style().standardIcon(
-                    QtWidgets.QStyle.SP_TitleBarCloseButton), completer.currentCompletion()))
-                self.tagLineEdit.setText("")
-                e.ignore()
-                return
+            return self.complete()
         QtWidgets.QLineEdit.keyPressEvent(self.tagLineEdit, e)
+
+    def complete(self):
+        completer = self.tagLineEdit.completer()
+        if completer.currentRow() >= 0:
+            self.add_tag(completer.currentCompletion())
+            self.tagLineEdit.setText("")
+
+    def add_tag(self, tag: str):
+        self.tagListWidget.addItem(QtWidgets.QListWidgetItem(self.style().standardIcon(
+            QtWidgets.QStyle.SP_TitleBarCloseButton), tag))
 
     def remove_tag(self, item: QtWidgets.QListWidgetItem):
         ind = self.tagListWidget.indexFromItem(item)
@@ -246,10 +250,17 @@ class FileTable(QtWidgets.QTableWidget):
         menu.popup(e.globalPos())
 
     def get_file_by_index(self, ind):
-        return self.files[ind]
+        f = self.files[ind]
+        self.visit(f.id)
+        return f
 
     def get_path_by_index(self, ind):
         return self.setting.get_absolute_path(self.get_file_by_index(ind).path)
+
+    def visit(self, file_id):
+        with self.setting.conn:
+            self.setting.conn.execute(
+                "UPDATE files SET vtime = ? WHERE id = ?", (str(datetime.now()), file_id))
 
     def open_file(self, item: QtWidgets.QTableWidgetItem):
         os.startfile(self.get_path_by_index(item.row()))
@@ -271,7 +282,11 @@ class FileTable(QtWidgets.QTableWidget):
         for row in rows:
             f = self.files[row]
             ids.append(f.id)
-            names.append(f.name)
+            p = pathlib.Path(f.path)
+            if p.is_absolute():
+                names.append(f"link-to: {f.name}")
+            else:
+                names.append(f"file: {f.name}")
         match QtWidgets.QMessageBox.question(self, "是否删除以下文件？", "\n".join(names), QtWidgets.QMessageBox.Cancel, QtWidgets.QMessageBox.Ok):
             case QtWidgets.QMessageBox.Ok:
                 with conn:
