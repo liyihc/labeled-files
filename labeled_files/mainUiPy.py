@@ -16,6 +16,17 @@ from .fileUiPy import File
 from .fileUiPy import Window as FileWin
 from .mainUi import Ui_MainWindow
 from .setting import SQLITE_NAME, Config, Setting
+import sys
+
+
+def except_hook(exc_type, exc_value, exc_traceback):
+    import logging
+    exception = logging.getLogger("exception")
+    exception.exception(exc_value, exc_info=exc_value)
+    QtWidgets.QMessageBox.information(None, "错误", str(exc_value))
+
+
+sys.excepthook = except_hook
 
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -59,6 +70,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             self.setting.set_root(ret)
 
     def search(self):
+        if not self.setting.root_path:
+            return
         keyword = self.searchLineEdit.text().strip()
         if self.tagLineEdit.text():
             self.complete()
@@ -288,7 +301,11 @@ class FileTable(QtWidgets.QTableWidget):
                 "UPDATE files SET vtime = ? WHERE id = ?", (str(datetime.now()), file_id))
 
     def open_file(self, item: QtWidgets.QTableWidgetItem):
-        os.startfile(self.get_path_by_index(item.row()))
+        p = self.get_path_by_index(item.row())
+        if p.exists():
+            os.startfile(p)
+        else:
+            QtWidgets.QMessageBox.information(self, "文件不存在", str(p))
 
     def edit_file(self, item: QtWidgets.QTableWidgetItem):
         win = FileWin(self.setting, self.get_file_by_index(item.row()))
