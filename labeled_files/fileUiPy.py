@@ -16,6 +16,7 @@ class File:
     id: int
     name: str
     path: str
+    is_dir: bool
     tags: List[str]
     ctime: datetime
     description: str

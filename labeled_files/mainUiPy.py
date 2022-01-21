@@ -187,10 +187,10 @@ class FileTable(QtWidgets.QTableWidget):
     def showFileAt(self, row, f: File, icon_provider: QtWidgets.QFileIconProvider = None):
         if not icon_provider:
             icon_provider = QtWidgets.QFileIconProvider()
-        p = pathlib.Path(f.path)
-        if not p.is_absolute():
-            p = self.setting.root_path.joinpath(p)
-        p = QtCore.QFileInfo(p)
+        if f.is_dir:
+            p = QtCore.QFileInfo(pathlib.Path(__file__).parent)
+        else:
+            p = QtCore.QFileInfo(pathlib.Path(f.path).name)
         icon = icon_provider.icon(p)
         item = QtWidgets.QTableWidgetItem(icon, f.name)
         self.setItem(row, 0, item)
@@ -256,14 +256,14 @@ class FileTable(QtWidgets.QTableWidget):
         for file in e.mimeData().text().splitlines():
             p = pathlib.Path(file.removeprefix("file:///"))
             stat = p.stat()
-            f = File(None, p.name, None, [], datetime.fromtimestamp(
+            f = File(None, p.name, None, p.is_dir(), [], datetime.fromtimestamp(
                 stat.st_ctime), "")
             p = func(p)
             f.path = str(p)
             with conn:
                 cur = conn.execute(
-                    f"INSERT INTO files(name, path, ctime, description) VALUES(?,?,?,?)",
-                    (f.name, f.path, str(f.ctime), f.description))
+                    f"INSERT INTO files(name, path, is_dir, ctime, vtime, description) VALUES(?,?,?,?,?,?)",
+                    (f.name, f.path, f.is_dir, str(f.ctime), str(datetime.now()), f.description))
                 f.id = cur.lastrowid
             files.append(f)
 
@@ -357,10 +357,10 @@ class FileTable(QtWidgets.QTableWidget):
 
 
 def get_file(conn: sqlite3.Connection, args):
-    id, name, path, ctime, vtime, description = args
+    id, name, path, is_dir, ctime, vtime, description = args
     tags = [tag for tag, in conn.execute(
         "SELECT label FROM file_labels WHERE file_id = ?", (id,))]
-    return File(id, name, str(path), tags, datetime.fromisoformat(ctime), description)
+    return File(id, name, str(path), is_dir, tags, datetime.fromisoformat(ctime), description)
 
 
 def tag_mime_data(items: List[QtWidgets.QTableWidgetItem]):

@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS files(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
     path TEXT,
+    is_dir BOOLEAN,
     ctime DATETIME,
     vtime DATETIME,
     description TEXT);

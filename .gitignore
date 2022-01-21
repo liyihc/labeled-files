@@ -2,5 +2,6 @@ __pycache__
 test_folder
 .vscode
 config.json
+exception.txt
 /build
 /dist
