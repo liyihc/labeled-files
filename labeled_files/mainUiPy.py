@@ -53,7 +53,10 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.table = FileTable(self.setting, self)
         self.fileVerticalLayout.addWidget(self.table)
 
+        self.current_tag = ""
         self.tagListWidget.itemClicked.connect(self.remove_tag)
+        self.tagTableWidget.currentItemChanged.connect(self.change_current_tag)
+        self.tagTableWidget.itemChanged.connect(self.rename_tag)
         self.searchPushButton.clicked.connect(self.search)
         self.openWorkSpaceAction.triggered.connect(self.open_workspace)
         self.delPushButton.clicked.connect(self.table.del_file)
@@ -85,6 +88,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.last_keyword = keyword
 
     def search_tag(self, keyword):
+        self.tagTableWidget.itemChanged.disconnect(self.rename_tag)
         conn = self.setting.conn
         labels = conn.execute(
             "SELECT label, COUNT(*) FROM file_labels GROUP BY label ORDER BY COUNT(*) DESC").fetchall()
@@ -95,11 +99,15 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.tagTableWidget.setRowCount(0)
         self.tagTableWidget.clearContents()
         self.tagTableWidget.setRowCount(len(labels))
+        Flags = QtCore.Qt.ItemFlag
         for row, (label, cnt) in enumerate(labels):
             self.tagTableWidget.setItem(
                 row, 0, QtWidgets.QTableWidgetItem(label))
+            item = QtWidgets.QTableWidgetItem(str(cnt))
+            item.setFlags(item.flags() & ~Flags.ItemIsEditable)
             self.tagTableWidget.setItem(
-                row, 1, QtWidgets.QTableWidgetItem(str(cnt)))
+                row, 1, item)
+        self.tagTableWidget.itemChanged.connect(self.rename_tag)
 
     def search_file(self, keyword, tags):
         conn = self.setting.conn
@@ -141,6 +149,22 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def remove_tag(self, item: QtWidgets.QListWidgetItem):
         ind = self.tagListWidget.indexFromItem(item)
         self.tagListWidget.takeItem(ind.row())
+
+    def change_current_tag(self, current_item: QtWidgets.QTableWidgetItem):
+        if current_item is None:
+            self.current_tag = None
+            return
+        self.current_tag = current_item.text()
+
+    def rename_tag(self, item: QtWidgets.QTableWidgetItem):
+        conn = self.setting.conn
+        if QtWidgets.QMessageBox.question(None, "确认", f'是否需要将标签"{self.current_tag}"重命名为"{item.text()}"', QtWidgets.QMessageBox.Cancel, QtWidgets.QMessageBox.Apply) != QtWidgets.QMessageBox.Apply:
+            return
+        with conn:
+            conn.execute("UPDATE file_labels SET label = ? WHERE label = ?",
+                         (item.text(), self.current_tag))
+        self.last_keyword = None
+        self.search()
 
     def __del__(self):
         conn = self.setting.conn
@@ -343,16 +367,17 @@ class FileTable(QtWidgets.QTableWidget):
         match QtWidgets.QMessageBox.question(self, "是否删除以下文件？", "\n".join(names), QtWidgets.QMessageBox.Cancel, QtWidgets.QMessageBox.Ok):
             case QtWidgets.QMessageBox.Ok:
                 with conn:
-                    conn.execute("DELETE FROM files WHERE id in (?)",
-                                 (",".join(str(id) for id in ids),))
-                    conn.execute("DELETE FROM file_labels WHERE file_id in (?)",
-                                 (",".join(str(id) for id in ids),))
+                    ids = ",".join(str(id) for id in ids)
+                    conn.execute(f"DELETE FROM files WHERE id in ({ids})")
+                    conn.execute(
+                        f"DELETE FROM file_labels WHERE file_id in ({ids})")
                     for i in reversed(rows):
                         f = self.files.pop(i)
                         p = pathlib.Path(f.path)
                         if not p.is_absolute():
                             p = self.setting.root_path.joinpath(p)
-                            p.unlink()
+                            if p.exists():
+                                p.unlink()
                     self.showFiles()
 
 

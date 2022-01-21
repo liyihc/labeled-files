@@ -74,6 +74,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tagTableWidget.sizePolicy().hasHeightForWidth())
         self.tagTableWidget.setSizePolicy(sizePolicy)
+        self.tagTableWidget.setEditTriggers(QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed|QAbstractItemView.SelectedClicked)
         self.tagTableWidget.setDragEnabled(True)
         self.tagTableWidget.setDragDropMode(QAbstractItemView.DragOnly)
         self.tagTableWidget.setSelectionMode(QAbstractItemView.SingleSelection)
