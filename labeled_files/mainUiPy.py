@@ -188,10 +188,10 @@ class FileTable(QtWidgets.QTableWidget):
         if not icon_provider:
             icon_provider = QtWidgets.QFileIconProvider()
         if f.is_dir:
-            p = QtCore.QFileInfo(pathlib.Path(__file__).parent)
+            icon = icon_provider.icon(icon_provider.IconType.Folder)
         else:
             p = QtCore.QFileInfo(pathlib.Path(f.path).name)
-        icon = icon_provider.icon(p)
+            icon = icon_provider.icon(p)
         item = QtWidgets.QTableWidgetItem(icon, f.name)
         self.setItem(row, 0, item)
         self.setItem(row, 1, QtWidgets.QTableWidgetItem(
