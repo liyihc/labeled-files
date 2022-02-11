@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Union
 
 import pydantic
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtCore
 
 SQLITE_NAME = "LABELED_FILES.sqlite3"
 
@@ -53,6 +53,8 @@ CREATE INDEX IF NOT EXISTS files_vtime
     def update_completer(self):
         self.completer = QtWidgets.QCompleter([keyword for keyword, in self.conn.execute(
             "SELECT DISTINCT label FROM file_labels")])
+        self.completer.setCaseSensitivity(
+            QtCore.Qt.CaseInsensitive.CaseInsensitive)
         for le in self.lineedits:
             le.setCompleter(self.completer)
 

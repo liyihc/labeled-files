@@ -327,7 +327,10 @@ class FileTable(QtWidgets.QTableWidget):
     def open_file(self, item: QtWidgets.QTableWidgetItem):
         p = self.get_path_by_index(item.row())
         if p.exists():
+            cwd = os.getcwd()
+            os.chdir(p.parent)
             os.startfile(p)
+            os.chdir(cwd)
         else:
             QtWidgets.QMessageBox.information(self, "文件不存在", str(p))
 
