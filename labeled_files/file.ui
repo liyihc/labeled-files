@@ -72,14 +72,14 @@
       <item row="4" column="1">
        <widget class="QLineEdit" name="tagLineEdit"/>
       </item>
-      <item row="5" column="0">
+      <item row="6" column="0">
        <widget class="QLabel" name="label_2">
         <property name="text">
          <string>描述</string>
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
+      <item row="6" column="1">
        <widget class="QPlainTextEdit" name="plainTextEdit"/>
       </item>
       <item row="3" column="1">
@@ -91,6 +91,31 @@
          <bool>true</bool>
         </property>
        </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>图标</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QLabel" name="iconLabel">
+          <property name="text">
+           <string>无图标</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="iconChoosePushButton">
+          <property name="text">
+           <string>选择图标</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </item>

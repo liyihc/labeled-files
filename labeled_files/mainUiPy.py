@@ -1,4 +1,6 @@
 from __future__ import annotations
+import base64
+from ctypes import cast
 
 import os
 import pathlib
@@ -15,7 +17,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from .fileUiPy import File
 from .fileUiPy import Window as FileWin
 from .mainUi import Ui_MainWindow
-from .setting import SQLITE_NAME, Config, Setting
+from .setting import SQLITE_NAME, Config, Setting, VERSION
 import sys
 
 
@@ -28,11 +30,14 @@ def except_hook(exc_type, exc_value, exc_traceback):
 
 sys.excepthook = except_hook
 
+need_icon_suffixes = {".exe", "", ".lnk"}
+
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setupUi(self)
+        self.setWindowTitle(f"Labeled Files {VERSION}")
         self.setting = Setting()
 
         config_path = pathlib.Path("config.json")
@@ -44,7 +49,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.menu.addSeparator()
         for space, path in self.config.workspaces.items():
             action = QtGui.QAction(space, self)
-            action.triggered.connect(partial(self.setting.set_root, path))
+            action.triggered.connect(partial(self.change_workspace, path))
             self.menu.addAction(action)
 
         self.tagTableWidget.mimeData = tag_mime_data
@@ -70,7 +75,12 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         ret = QtWidgets.QFileDialog.getExistingDirectory(
             caption="open a folder as workspace")
         if ret:
-            self.setting.set_root(ret)
+            self.change_workspace(ret)
+
+    def change_workspace(self, path):
+        self.setting.set_root(path)
+        self.last_keyword = None
+        self.search()
 
     def search(self):
         if not self.setting.root_path:
@@ -127,7 +137,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         file_ids = ','.join(str(f) for f in file_ids)
 
         files: List[File] = [get_file(conn, record) for record in conn.execute(
-            f"SELECT * FROM files WHERE id in ({file_ids}) ORDER BY vtime DESC")]
+            f"SELECT id, name, path, is_dir, ctime, vtime, icon, description FROM files WHERE id in ({file_ids}) ORDER BY vtime DESC")]
 
         self.table.showFiles(files)
 
@@ -209,13 +219,18 @@ class FileTable(QtWidgets.QTableWidget):
             self.showFileAt(row, file, icon_provider)
 
     def showFileAt(self, row, f: File, icon_provider: QtWidgets.QFileIconProvider = None):
-        if not icon_provider:
-            icon_provider = QtWidgets.QFileIconProvider()
-        if f.is_dir:
-            icon = icon_provider.icon(icon_provider.IconType.Folder)
+        if f.icon:
+            pixmap = QtGui.QPixmap()
+            pixmap.loadFromData(base64.b64decode(f.icon))
+            icon = QtGui.QIcon(pixmap)
         else:
-            p = QtCore.QFileInfo(pathlib.Path(f.path).name)
-            icon = icon_provider.icon(p)
+            if not icon_provider:
+                icon_provider = QtWidgets.QFileIconProvider()
+            if f.is_dir:
+                icon = icon_provider.icon(icon_provider.IconType.Folder)
+            else:
+                p = QtCore.QFileInfo(pathlib.Path(f.path).name)
+                icon = icon_provider.icon(p)
         item = QtWidgets.QTableWidgetItem(icon, f.name)
         self.setItem(row, 0, item)
         self.setItem(row, 1, QtWidgets.QTableWidgetItem(
@@ -277,17 +292,27 @@ class FileTable(QtWidgets.QTableWidget):
 
         conn = self.setting.conn
         files = []
+        icon_privider = QtWidgets.QFileIconProvider()
         for file in e.mimeData().text().splitlines():
             p = pathlib.Path(file.removeprefix("file:///"))
             stat = p.stat()
             f = File(None, p.name, None, p.is_dir(), [], datetime.fromtimestamp(
-                stat.st_ctime), "")
+                stat.st_ctime), "", "")
             p = func(p)
             f.path = str(p)
+            if not p.is_dir() and p.suffix.lower() in need_icon_suffixes:
+                icon = icon_privider.icon(QtCore.QFileInfo(p))
+                b = QtCore.QByteArray()
+                buffer = QtCore.QBuffer(b)
+                buffer.open(QtCore.QIODevice.WriteOnly)
+                icon.pixmap(10, 10, QtGui.QIcon.Mode.Normal).save(
+                    buffer, 'PNG')
+                buffer.close()
+                f.icon = base64.b64encode(b.data())
             with conn:
                 cur = conn.execute(
-                    f"INSERT INTO files(name, path, is_dir, ctime, vtime, description) VALUES(?,?,?,?,?,?)",
-                    (f.name, f.path, f.is_dir, str(f.ctime), str(datetime.now()), f.description))
+                    f"INSERT INTO files(name, path, is_dir, ctime, vtime, icon, description) VALUES(?,?,?,?,?,?,?)",
+                    (f.name, f.path, f.is_dir, str(f.ctime), str(datetime.now()), f.icon, f.description))
                 f.id = cur.lastrowid
             files.append(f)
 
@@ -343,7 +368,7 @@ class FileTable(QtWidgets.QTableWidget):
     def reshow(self, file_id):
         conn = self.setting.conn
         f = get_file(conn, conn.execute(
-            "SELECT * FROM files WHERE id = ? LIMIT 1", (file_id,)).fetchone())
+            "SELECT id, name, path, is_dir, ctime, vtime, icon, description FROM files WHERE id = ? LIMIT 1", (file_id,)).fetchone())
         for ind, rep in enumerate(self.files):
             if rep.id == file_id:
                 self.files[ind] = f
@@ -385,10 +410,10 @@ class FileTable(QtWidgets.QTableWidget):
 
 
 def get_file(conn: sqlite3.Connection, args):
-    id, name, path, is_dir, ctime, vtime, description = args
+    id, name, path, is_dir, ctime, vtime, icon, description = args
     tags = [tag for tag, in conn.execute(
         "SELECT label FROM file_labels WHERE file_id = ?", (id,))]
-    return File(id, name, str(path), is_dir, tags, datetime.fromisoformat(ctime), description)
+    return File(id, name, str(path), is_dir, tags, datetime.fromisoformat(ctime), icon, description)
 
 
 def tag_mime_data(items: List[QtWidgets.QTableWidgetItem]):

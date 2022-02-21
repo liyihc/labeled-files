@@ -80,18 +80,38 @@ class Ui_MainWindow(object):
         self.label_2 = QLabel(self.centralwidget)
         self.label_2.setObjectName(u"label_2")
 
-        self.formLayout.setWidget(5, QFormLayout.LabelRole, self.label_2)
+        self.formLayout.setWidget(6, QFormLayout.LabelRole, self.label_2)
 
         self.plainTextEdit = QPlainTextEdit(self.centralwidget)
         self.plainTextEdit.setObjectName(u"plainTextEdit")
 
-        self.formLayout.setWidget(5, QFormLayout.FieldRole, self.plainTextEdit)
+        self.formLayout.setWidget(6, QFormLayout.FieldRole, self.plainTextEdit)
 
         self.dateTimeEdit = QDateTimeEdit(self.centralwidget)
         self.dateTimeEdit.setObjectName(u"dateTimeEdit")
         self.dateTimeEdit.setCalendarPopup(True)
 
         self.formLayout.setWidget(3, QFormLayout.FieldRole, self.dateTimeEdit)
+
+        self.label_4 = QLabel(self.centralwidget)
+        self.label_4.setObjectName(u"label_4")
+
+        self.formLayout.setWidget(5, QFormLayout.LabelRole, self.label_4)
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.iconLabel = QLabel(self.centralwidget)
+        self.iconLabel.setObjectName(u"iconLabel")
+
+        self.horizontalLayout_2.addWidget(self.iconLabel)
+
+        self.iconChoosePushButton = QPushButton(self.centralwidget)
+        self.iconChoosePushButton.setObjectName(u"iconChoosePushButton")
+
+        self.horizontalLayout_2.addWidget(self.iconChoosePushButton)
+
+
+        self.formLayout.setLayout(5, QFormLayout.FieldRole, self.horizontalLayout_2)
 
 
         self.verticalLayout.addLayout(self.formLayout)
@@ -135,6 +155,9 @@ class Ui_MainWindow(object):
         self.label.setText(QCoreApplication.translate("MainWindow", u"\u6807\u7b7e", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"\u63cf\u8ff0", None))
         self.dateTimeEdit.setDisplayFormat(QCoreApplication.translate("MainWindow", u"yy/MM/dd HH:mm:ss", None))
+        self.label_4.setText(QCoreApplication.translate("MainWindow", u"\u56fe\u6807", None))
+        self.iconLabel.setText(QCoreApplication.translate("MainWindow", u"\u65e0\u56fe\u6807", None))
+        self.iconChoosePushButton.setText(QCoreApplication.translate("MainWindow", u"\u9009\u62e9\u56fe\u6807", None))
         self.cancelPushButton.setText(QCoreApplication.translate("MainWindow", u"\u53d6\u6d88", None))
         self.confirmPushButton.setText(QCoreApplication.translate("MainWindow", u"\u786e\u8ba4", None))
 #if QT_CONFIG(shortcut)
