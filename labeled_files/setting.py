@@ -9,9 +9,17 @@ import pydantic
 from PySide6 import QtWidgets, QtCore
 
 SQLITE_NAME = "LABELED_FILES.sqlite3"
-VERSION = "0.1.1"
+VERSION = "0.1.2"
 
 updaters: List[Tuple[Version, Callable[[sqlite3.Connection], None]]] = []
+
+import logging
+logger = logging.getLogger("record")
+
+
+def logv(tag: str, message: str = ""):
+    print(tag, message)
+    logger.info(f"{tag}-{message}")
 
 
 @dataclass

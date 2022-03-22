@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'main.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.2.2
+## Created by: Qt User Interface Compiler version 6.2.4
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -74,7 +74,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tagTableWidget.sizePolicy().hasHeightForWidth())
         self.tagTableWidget.setSizePolicy(sizePolicy)
-        self.tagTableWidget.setEditTriggers(QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed|QAbstractItemView.SelectedClicked)
+        self.tagTableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.tagTableWidget.setDragEnabled(True)
         self.tagTableWidget.setDragDropMode(QAbstractItemView.DragOnly)
         self.tagTableWidget.setSelectionMode(QAbstractItemView.SingleSelection)

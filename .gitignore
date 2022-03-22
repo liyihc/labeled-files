@@ -3,5 +3,6 @@ test_folder
 .vscode
 config.json
 exception.txt
+record.txt
 /build
 /dist

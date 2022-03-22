@@ -1,6 +1,5 @@
 from __future__ import annotations
 import base64
-from ctypes import cast
 
 import os
 import pathlib
@@ -10,14 +9,14 @@ import sqlite3
 import subprocess
 from datetime import datetime
 from functools import partial, reduce
-from typing import Dict, List, Set, Union
+from typing import List
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from .fileUiPy import File
 from .fileUiPy import Window as FileWin
 from .mainUi import Ui_MainWindow
-from .setting import SQLITE_NAME, Config, Setting, VERSION
+from .setting import Config, Setting, VERSION, logv
 import sys
 
 
@@ -58,10 +57,9 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.table = FileTable(self.setting, self)
         self.fileVerticalLayout.addWidget(self.table)
 
-        self.current_tag = ""
         self.tagListWidget.itemClicked.connect(self.remove_tag)
-        self.tagTableWidget.currentItemChanged.connect(self.change_current_tag)
-        self.tagTableWidget.itemChanged.connect(self.rename_tag)
+        self.tagTableWidget.itemDoubleClicked.connect(self.doubleclick_tag)
+        # TODO: add context menu to tagtablewidget to edit tags
         self.searchPushButton.clicked.connect(self.search)
         self.openWorkSpaceAction.triggered.connect(self.open_workspace)
         self.delPushButton.clicked.connect(self.table.del_file)
@@ -86,6 +84,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         if not self.setting.root_path:
             return
         keyword = self.searchLineEdit.text().strip()
+        logv("SEARCH", f"keyword {keyword}")
         if self.tagLineEdit.text():
             self.complete()
         tags = []
@@ -98,7 +97,6 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.last_keyword = keyword
 
     def search_tag(self, keyword):
-        self.tagTableWidget.itemChanged.disconnect(self.rename_tag)
         conn = self.setting.conn
         labels = conn.execute(
             "SELECT label, COUNT(*) FROM file_labels GROUP BY label ORDER BY COUNT(*) DESC").fetchall()
@@ -117,7 +115,6 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             item.setFlags(item.flags() & ~Flags.ItemIsEditable)
             self.tagTableWidget.setItem(
                 row, 1, item)
-        self.tagTableWidget.itemChanged.connect(self.rename_tag)
 
     def search_file(self, keyword, tags):
         conn = self.setting.conn
@@ -147,34 +144,32 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         QtWidgets.QLineEdit.keyPressEvent(self.tagLineEdit, e)
 
     def complete(self):
+        logv("COMPLETE")
         completer = self.tagLineEdit.completer()
         if completer.currentRow() >= 0:
-            self.add_tag(completer.currentCompletion())
+            tag = completer.currentCompletion()
             self.tagLineEdit.setText("")
+            self.add_tag(tag)
 
     def add_tag(self, tag: str):
-        self.tagListWidget.addItem(QtWidgets.QListWidgetItem(self.style().standardIcon(
-            QtWidgets.QStyle.SP_TitleBarCloseButton), tag))
+        tags = [self.tagListWidget.item(i).text()
+                for i in range(self.tagListWidget.count())]
+
+        logv("TAG", f"add '{tag}' to '{','.join(tags)}'")
+        if tag not in tags:
+            self.tagListWidget.addItem(QtWidgets.QListWidgetItem(self.style().standardIcon(
+                QtWidgets.QStyle.SP_TitleBarCloseButton), tag))
+            self.search()
 
     def remove_tag(self, item: QtWidgets.QListWidgetItem):
         ind = self.tagListWidget.indexFromItem(item)
         self.tagListWidget.takeItem(ind.row())
-
-    def change_current_tag(self, current_item: QtWidgets.QTableWidgetItem):
-        if current_item is None:
-            self.current_tag = None
-            return
-        self.current_tag = current_item.text()
-
-    def rename_tag(self, item: QtWidgets.QTableWidgetItem):
-        conn = self.setting.conn
-        if QtWidgets.QMessageBox.question(None, "确认", f'是否需要将标签"{self.current_tag}"重命名为"{item.text()}"', QtWidgets.QMessageBox.Cancel, QtWidgets.QMessageBox.Apply) != QtWidgets.QMessageBox.Apply:
-            return
-        with conn:
-            conn.execute("UPDATE file_labels SET label = ? WHERE label = ?",
-                         (item.text(), self.current_tag))
-        self.last_keyword = None
         self.search()
+
+    def doubleclick_tag(self, item: QtWidgets.QTableWidgetItem):
+        row = item.row()
+        tag = self.tagTableWidget.item(row, 0).text()
+        self.add_tag(tag)
 
     def __del__(self):
         conn = self.setting.conn
@@ -300,7 +295,7 @@ class FileTable(QtWidgets.QTableWidget):
                 stat.st_ctime), "", "")
             p = func(p)
             f.path = str(p)
-            if not p.is_dir() and p.suffix.lower() in need_icon_suffixes:
+            if not f.is_dir and p.suffix.lower() in need_icon_suffixes:
                 icon = icon_privider.icon(QtCore.QFileInfo(p))
                 b = QtCore.QByteArray()
                 buffer = QtCore.QBuffer(b)

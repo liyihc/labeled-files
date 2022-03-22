@@ -37,8 +37,6 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.idLineEdit.setText(str(file.id))
         self.nameLineEdit.setText(file.name)
         self.dateTimeEdit.setDateTime(file.ctime)
-        self.pathPushButton.clicked.connect(
-            partial(subprocess.Popen, f'explorer /select,"{setting.get_absolute_path(file.path)}"'))
         self.tagLineEdit.setText(
             " ".join(['#' + tag for tag in file.tags]))
         if file.icon:
@@ -55,9 +53,12 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.plainTextEdit.setPlainText(file.description)
 
+        self.pathPushButton.clicked.connect(
+            partial(subprocess.Popen, f'explorer /select,"{setting.get_absolute_path(file.path)}"'))
         self.cancelPushButton.clicked.connect(lambda: self.close())
         self.confirmPushButton.clicked.connect(self.confirm)
         self.iconChoosePushButton.clicked.connect(self.icon_choose)
+        self.iconImageChoosePushButton.clicked.connect(self.image_choose)
 
     def confirm(self):
         file = copy.deepcopy(self.origin_file)
@@ -95,9 +96,23 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.close()
 
     def icon_choose(self):
-        f, typ = QtWidgets.QFileDialog.getOpenFileName(self, "choose a icon", str(pathlib.Path(self.setting.get_absolute_path(self.origin_file.path)).parent))
+        f, typ = QtWidgets.QFileDialog.getOpenFileName(self, "choose an icon", str(
+            pathlib.Path(self.setting.get_absolute_path(self.origin_file.path)).parent))
         if not f:
             return
-        pixmap = QtWidgets.QFileIconProvider().icon(QtCore.QFileInfo(f)).pixmap(10, 10, QtGui.QIcon.Mode.Normal)
+        pixmap = QtWidgets.QFileIconProvider().icon(
+            QtCore.QFileInfo(f)).pixmap(10, 10, QtGui.QIcon.Mode.Normal)
         self.iconLabel.setPixmap(pixmap)
-        
+
+    def image_choose(self):
+        f, typ = QtWidgets.QFileDialog.getOpenFileName(self, "choose an image", str(
+            pathlib.Path(self.setting.get_absolute_path(self.origin_file.path)).parent))
+        if not f:
+            return
+        pixmap = QtGui.QPixmap()
+        pixmap.load(f)
+        if pixmap.width() > pixmap.height():
+            pixmap = pixmap.scaledToWidth(20)
+        else:
+            pixmap = pixmap.scaledToHeight(20)
+        self.iconLabel.setPixmap(pixmap)

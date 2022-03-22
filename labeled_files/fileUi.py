@@ -110,6 +110,11 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addWidget(self.iconChoosePushButton)
 
+        self.iconImageChoosePushButton = QPushButton(self.centralwidget)
+        self.iconImageChoosePushButton.setObjectName(u"iconImageChoosePushButton")
+
+        self.horizontalLayout_2.addWidget(self.iconImageChoosePushButton)
+
 
         self.formLayout.setLayout(5, QFormLayout.FieldRole, self.horizontalLayout_2)
 
@@ -158,6 +163,7 @@ class Ui_MainWindow(object):
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"\u56fe\u6807", None))
         self.iconLabel.setText(QCoreApplication.translate("MainWindow", u"\u65e0\u56fe\u6807", None))
         self.iconChoosePushButton.setText(QCoreApplication.translate("MainWindow", u"\u9009\u62e9\u56fe\u6807", None))
+        self.iconImageChoosePushButton.setText(QCoreApplication.translate("MainWindow", u"\u9009\u62e9\u56fe\u7247", None))
         self.cancelPushButton.setText(QCoreApplication.translate("MainWindow", u"\u53d6\u6d88", None))
         self.confirmPushButton.setText(QCoreApplication.translate("MainWindow", u"\u786e\u8ba4", None))
 #if QT_CONFIG(shortcut)

@@ -115,6 +115,13 @@
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QPushButton" name="iconImageChoosePushButton">
+          <property name="text">
+           <string>选择图片</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
      </layout>

@@ -1,7 +1,6 @@
 from PySide6 import QtWidgets
 import sys
 import logging
-from labeled_files.mainUiPy import Window
 
 logger = logging.getLogger("exception")
 
@@ -12,8 +11,17 @@ log_file_handler.setFormatter(formatter)
 logger.addHandler(log_file_handler)
 logger.setLevel(logging.DEBUG)
 
+logger = logging.getLogger("record")
+
+formatter = logging.Formatter("%(asctime)s - %(filename)s: %(message)s")
+log_file_handler = logging.FileHandler('record.txt', encoding='utf-8')
+log_file_handler.setFormatter(formatter)
+logger.addHandler(log_file_handler)
+logger.setLevel(logging.INFO)
+
 
 def main():
+    from labeled_files.mainUiPy import Window
     app = QtWidgets.QApplication([])
     win = Window()
     win.show()
