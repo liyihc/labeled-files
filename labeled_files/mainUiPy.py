@@ -164,6 +164,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         while item:
             tag.append(item.text(0))
             item = item.parent()
+        while self.tagListWidget.count():
+            self.tagListWidget.takeItem(0)
         self.add_tag('/'.join(reversed(tag)))
 
     def __del__(self):

@@ -26,9 +26,9 @@ class Node:
                 path = [key]
                 while len(node.sub_nodes) == 1:
                     key = list(node.sub_nodes.keys())[0]
-                    path.append(key)
                     sub_node = node.sub_nodes[key]
                     if sub_node.count == node.count:
+                        path.append(key)
                         node = node.sub_nodes[key]
                     else:
                         break
