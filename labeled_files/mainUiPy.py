@@ -17,6 +17,7 @@ from .fileUiPy import File
 from .fileUiPy import Window as FileWin
 from .mainUi import Ui_MainWindow
 from .setting import Config, Setting, VERSION, logv
+from .tree import build_tree
 import sys
 
 
@@ -51,14 +52,14 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             action.triggered.connect(partial(self.change_workspace, path))
             self.menu.addAction(action)
 
-        self.tagTableWidget.mimeData = tag_mime_data
+        # TODO self.tagTableWidget.mimeData = tag_mime_data
         self.tagLineEdit.keyPressEvent = self.check_complete
         self.setting.lineedits.append(self.tagLineEdit)
         self.table = FileTable(self.setting, self)
         self.fileVerticalLayout.addWidget(self.table)
 
         self.tagListWidget.itemClicked.connect(self.remove_tag)
-        self.tagTableWidget.itemDoubleClicked.connect(self.doubleclick_tag)
+        self.treeWidget.itemDoubleClicked.connect(self.doubleclick_tag)
         # TODO: add context menu to tagtablewidget to edit tags
         self.searchPushButton.clicked.connect(self.search)
         self.openWorkSpaceAction.triggered.connect(self.open_workspace)
@@ -99,28 +100,18 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def search_tag(self, keyword):
         conn = self.setting.conn
         labels = conn.execute(
-            "SELECT label, COUNT(*) FROM file_labels GROUP BY label ORDER BY COUNT(*) DESC").fetchall()
+            "SELECT label, COUNT(*) FROM file_labels GROUP BY label ORDER BY label").fetchall()
         if keyword:
             labels = [(label, cnt)
                       for label, cnt in labels if keyword in label]
 
-        self.tagTableWidget.setRowCount(0)
-        self.tagTableWidget.clearContents()
-        self.tagTableWidget.setRowCount(len(labels))
-        Flags = QtCore.Qt.ItemFlag
-        for row, (label, cnt) in enumerate(labels):
-            self.tagTableWidget.setItem(
-                row, 0, QtWidgets.QTableWidgetItem(label))
-            item = QtWidgets.QTableWidgetItem(str(cnt))
-            item.setFlags(item.flags() & ~Flags.ItemIsEditable)
-            self.tagTableWidget.setItem(
-                row, 1, item)
+        build_tree(self.treeWidget, labels)
 
     def search_file(self, keyword, tags):
         conn = self.setting.conn
         if len(tags):
             file_ids = reduce(lambda a, b: a & b, map(
-                lambda tag: {v for v, in conn.execute("SELECT file_id FROM file_labels WHERE label = ?", (tag,))}, tags))
+                lambda tag: {v for v, in conn.execute(f"SELECT file_id FROM file_labels WHERE label = '{tag}' OR label LIKE '{tag}/%'")}, tags))
             if keyword:
                 file_ids = ','.join(str(f) for f in file_ids)
                 file_ids = [f for f, in conn.execute(
@@ -139,8 +130,10 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.table.showFiles(files)
 
     def check_complete(self, e: QtGui.QKeyEvent):
-        if e.key() == 32:
-            return self.complete()
+        match e.key():
+            case 32:
+                return self.complete()
+
         QtWidgets.QLineEdit.keyPressEvent(self.tagLineEdit, e)
 
     def complete(self):
@@ -166,10 +159,12 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.tagListWidget.takeItem(ind.row())
         self.search()
 
-    def doubleclick_tag(self, item: QtWidgets.QTableWidgetItem):
-        row = item.row()
-        tag = self.tagTableWidget.item(row, 0).text()
-        self.add_tag(tag)
+    def doubleclick_tag(self, item: QtWidgets.QTreeWidgetItem):
+        tag = []
+        while item:
+            tag.append(item.text(0))
+            item = item.parent()
+        self.add_tag('/'.join(reversed(tag)))
 
     def __del__(self):
         conn = self.setting.conn

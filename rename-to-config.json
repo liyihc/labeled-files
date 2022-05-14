@@ -1,0 +1,7 @@
+{
+    "default": "dir1",
+    "workspaces": {
+        "dir1": "C:\\",
+        "dir2": "C:\\"
+    }
+}

@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'main.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.2.4
+## Created by: Qt User Interface Compiler version 6.2.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QFram
     QHBoxLayout, QHeaderView, QLineEdit, QListView,
     QListWidget, QListWidgetItem, QMainWindow, QMenu,
     QMenuBar, QPushButton, QSizePolicy, QSpacerItem,
-    QStatusBar, QTableWidget, QTableWidgetItem, QVBoxLayout,
+    QStatusBar, QTreeWidget, QTreeWidgetItem, QVBoxLayout,
     QWidget)
 
 class Ui_MainWindow(object):
@@ -61,38 +61,23 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2 = QHBoxLayout()
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.tagTableWidget = QTableWidget(self.centralwidget)
-        if (self.tagTableWidget.columnCount() < 2):
-            self.tagTableWidget.setColumnCount(2)
-        __qtablewidgetitem = QTableWidgetItem()
-        self.tagTableWidget.setHorizontalHeaderItem(0, __qtablewidgetitem)
-        __qtablewidgetitem1 = QTableWidgetItem()
-        self.tagTableWidget.setHorizontalHeaderItem(1, __qtablewidgetitem1)
-        self.tagTableWidget.setObjectName(u"tagTableWidget")
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.tagTableWidget.sizePolicy().hasHeightForWidth())
-        self.tagTableWidget.setSizePolicy(sizePolicy)
-        self.tagTableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.tagTableWidget.setDragEnabled(True)
-        self.tagTableWidget.setDragDropMode(QAbstractItemView.DragOnly)
-        self.tagTableWidget.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.tagTableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.tagTableWidget.horizontalHeader().setStretchLastSection(True)
-        self.tagTableWidget.verticalHeader().setVisible(False)
+        self.treeWidget = QTreeWidget(self.centralwidget)
+        self.treeWidget.setObjectName(u"treeWidget")
+        self.treeWidget.setMaximumSize(QSize(300, 16777215))
+        self.treeWidget.header().setCascadingSectionResizes(False)
+        self.treeWidget.header().setDefaultSectionSize(200)
 
-        self.horizontalLayout_2.addWidget(self.tagTableWidget)
+        self.horizontalLayout_2.addWidget(self.treeWidget)
 
         self.verticalLayout = QVBoxLayout()
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.tagListWidget = QListWidget(self.centralwidget)
         self.tagListWidget.setObjectName(u"tagListWidget")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.tagListWidget.sizePolicy().hasHeightForWidth())
-        self.tagListWidget.setSizePolicy(sizePolicy1)
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.tagListWidget.sizePolicy().hasHeightForWidth())
+        self.tagListWidget.setSizePolicy(sizePolicy)
         self.tagListWidget.setMaximumSize(QSize(16777215, 40))
         palette = QPalette()
         brush = QBrush(QColor(0, 0, 0, 255))
@@ -263,10 +248,9 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(shortcut)
         self.searchPushButton.setShortcut(QCoreApplication.translate("MainWindow", u"Return", None))
 #endif // QT_CONFIG(shortcut)
-        ___qtablewidgetitem = self.tagTableWidget.horizontalHeaderItem(0)
-        ___qtablewidgetitem.setText(QCoreApplication.translate("MainWindow", u"\u6807\u7b7e", None));
-        ___qtablewidgetitem1 = self.tagTableWidget.horizontalHeaderItem(1)
-        ___qtablewidgetitem1.setText(QCoreApplication.translate("MainWindow", u"\u6b21\u6570", None));
+        ___qtreewidgetitem = self.treeWidget.headerItem()
+        ___qtreewidgetitem.setText(1, QCoreApplication.translate("MainWindow", u"\u8ba1\u6570", None));
+        ___qtreewidgetitem.setText(0, QCoreApplication.translate("MainWindow", u"\u6807\u7b7e", None));
         self.delPushButton.setText(QCoreApplication.translate("MainWindow", u"\u5220\u9664", None))
 #if QT_CONFIG(shortcut)
         self.delPushButton.setShortcut(QCoreApplication.translate("MainWindow", u"Del", None))

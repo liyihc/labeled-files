@@ -9,7 +9,7 @@ import pydantic
 from PySide6 import QtWidgets, QtCore
 
 SQLITE_NAME = "LABELED_FILES.sqlite3"
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 
 updaters: List[Tuple[Version, Callable[[sqlite3.Connection], None]]] = []
 
@@ -83,8 +83,17 @@ CREATE INDEX IF NOT EXISTS files_vtime
         self.update_completer()
 
     def update_completer(self):
-        self.completer = QtWidgets.QCompleter([keyword for keyword, in self.conn.execute(
-            "SELECT DISTINCT label FROM file_labels")])
+        keywords = set()
+        keyword: str
+        for keyword, in self.conn.execute("SELECT DISTINCT label FROM file_labels"):
+            parts = keyword.split('/')
+            base = parts[0]
+            keywords.add(base)
+            for part in parts[1:]:
+                base += f"/{part}"
+                keywords.add(base)
+
+        self.completer = QtWidgets.QCompleter(keywords)
         self.completer.setCaseSensitivity(
             QtCore.Qt.CaseInsensitive.CaseInsensitive)
         for le in self.lineedits:
