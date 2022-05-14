@@ -6,12 +6,12 @@ from packaging.version import Version
 
 
 import pydantic
+from PySide6 import QtWidgets, QtCore
 
 SQLITE_NAME = "LABELED_FILES.sqlite3"
-VERSION = "0.2.0"
+VERSION = "0.1.3"
 
 updaters: List[Tuple[Version, Callable[[sqlite3.Connection], None]]] = []
-
 
 import logging
 
@@ -42,7 +42,8 @@ def logv(tag: str, message: str = ""):
 class Setting:
     root_path: pathlib.Path = None
     conn: sqlite3.Connection = None
-    tags: List[str] = field(default_factory=list)
+    completer: QtWidgets.QCompleter = None
+    lineedits: List[QtWidgets.QLineEdit] = field(default_factory=list)
 
     def connect_to(self, path: Union[str, pathlib.Path]):
         path = pathlib.Path(path)
@@ -95,12 +96,20 @@ CREATE INDEX IF NOT EXISTS files_vtime
             self.conn.close()
         self.root_path = pathlib.Path(root)
         self.connect_to(self.root_path.joinpath(SQLITE_NAME))
+        self.update_tags()
 
-    def get_absolute_path(self, path: Union[str, pathlib.Path]) -> pathlib.Path:
-        path = pathlib.Path(path)
-        if path.is_absolute():
-            return path
-        return self.root_path.joinpath(path)
+    def update_tags(self):
+        tags = {""}
+        tag: str
+        for tag, in self.conn.execute("SELECT DISTINCT label FROM file_labels"):
+            parts = tag.split('/')
+            base = parts[0]
+            tags.add(base)
+            for part in parts[1:]:
+                base += f"/{part}"
+                tags.add(base)
+
+        self.tags = sorted(tags)
 
 
 class Config(pydantic.BaseModel):

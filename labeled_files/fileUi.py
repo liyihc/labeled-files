@@ -105,6 +105,11 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addWidget(self.iconLabel)
 
+        self.iconFolderPushButton = QPushButton(self.centralwidget)
+        self.iconFolderPushButton.setObjectName(u"iconFolderPushButton")
+
+        self.horizontalLayout_2.addWidget(self.iconFolderPushButton)
+
         self.iconChoosePushButton = QPushButton(self.centralwidget)
         self.iconChoosePushButton.setObjectName(u"iconChoosePushButton")
 
@@ -162,6 +167,7 @@ class Ui_MainWindow(object):
         self.dateTimeEdit.setDisplayFormat(QCoreApplication.translate("MainWindow", u"yy/MM/dd HH:mm:ss", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"\u56fe\u6807", None))
         self.iconLabel.setText(QCoreApplication.translate("MainWindow", u"\u65e0\u56fe\u6807", None))
+        self.iconFolderPushButton.setText(QCoreApplication.translate("MainWindow", u"\u6587\u4ef6\u5939\u56fe\u6807", None))
         self.iconChoosePushButton.setText(QCoreApplication.translate("MainWindow", u"\u9009\u62e9\u56fe\u6807", None))
         self.iconImageChoosePushButton.setText(QCoreApplication.translate("MainWindow", u"\u9009\u62e9\u56fe\u7247", None))
         self.cancelPushButton.setText(QCoreApplication.translate("MainWindow", u"\u53d6\u6d88", None))

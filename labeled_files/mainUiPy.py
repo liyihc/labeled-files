@@ -38,6 +38,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle(f"Labeled Files {VERSION}")
+        self.tagLabel.setText("")
         self.setting = Setting()
 
         config_path = pathlib.Path("config.json")
@@ -52,23 +53,18 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             action.triggered.connect(partial(self.change_workspace, path))
             self.menu.addAction(action)
 
-        # TODO self.tagTableWidget.mimeData = tag_mime_data
-        self.tagLineEdit.keyPressEvent = self.check_complete
-        self.setting.lineedits.append(self.tagLineEdit)
         self.table = FileTable(self.setting, self)
         self.fileVerticalLayout.addWidget(self.table)
 
-        self.tagListWidget.itemClicked.connect(self.remove_tag)
         self.treeWidget.itemDoubleClicked.connect(self.doubleclick_tag)
-        # TODO: add context menu to tagtablewidget to edit tags
         self.searchPushButton.clicked.connect(self.search)
         self.openWorkSpaceAction.triggered.connect(self.open_workspace)
+        self.clearTagPushButton.clicked.connect(self.clear_tag)
         self.delPushButton.clicked.connect(self.table.del_file)
 
         default = self.config.workspaces.get(self.config.default, None)
         if default:
             self.setting.set_root(default)
-        self.last_keyword = None
 
     def open_workspace(self):
         ret = QtWidgets.QFileDialog.getExistingDirectory(
@@ -85,88 +81,67 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         if not self.setting.root_path:
             return
         keyword = self.searchLineEdit.text().strip()
-        logv("SEARCH", f"keyword {keyword}")
-        if self.tagLineEdit.text():
-            self.complete()
-        tags = []
-        for i in range(self.tagListWidget.count()):
-            tags.append(self.tagListWidget.item(i).text())
+        tag = self.tagLabel.text()
+        logv("SEARCH", f"keyword='{keyword}' tag='{tag}'")
 
-        if self.last_keyword != keyword:
-            self.search_tag(keyword)
-        self.search_file(keyword, tags)
-        self.last_keyword = keyword
+        self.search_tag(keyword, tag)
+        self.search_file(keyword, tag)
 
-    def search_tag(self, keyword):
+    def search_tag(self, keyword, tag):
         conn = self.setting.conn
-        labels = conn.execute(
-            "SELECT label, COUNT(*) FROM file_labels GROUP BY label ORDER BY label").fetchall()
-        if keyword:
-            labels = [(label, cnt)
-                      for label, cnt in labels if keyword in label]
 
-        build_tree(self.treeWidget, labels)
+        match keyword, tag:
+            case "", "":
+                where = ""
+            case keyword, "":
+                where = f"WHERE label LIKE '%{keyword}%'"
+            case "", tag:
+                where = f"WHERE label = '{tag}' OR label LIKE '{tag}/%'"
+            case keyword, tag:
+                where = f"WHERE label LIKE '%{keyword}%' AND (label LIKE '{tag}/%' OR label = '{tag}')"
+        sql = f"SELECT label, COUNT(*) FROM file_labels {where} GROUP BY label ORDER BY label"
+        tags = conn.execute(sql).fetchall()
 
-    def search_file(self, keyword, tags):
+        build_tree(self.treeWidget, tags)
+
+    def search_file(self, keyword, tag):
         conn = self.setting.conn
-        if len(tags):
-            file_ids = reduce(lambda a, b: a & b, map(
-                lambda tag: {v for v, in conn.execute(f"SELECT file_id FROM file_labels WHERE label = '{tag}' OR label LIKE '{tag}/%'")}, tags))
-            if keyword:
-                file_ids = ','.join(str(f) for f in file_ids)
+        match keyword, tag:
+            case "", "":
                 file_ids = [f for f, in conn.execute(
-                    f'SELECT id FROM files WHERE name like "%{keyword}%" AND id in ({file_ids}) ORDER BY ctime DESC')]
-        elif keyword:
-            file_ids = [f for f, in conn.execute(
-                f'SELECT id FROM files WHERE name like "%{keyword}%" ORDER BY ctime DESC')]
+                    "SELECT id FROM files ORDER BY vtime DESC LIMIT 50")]
+            case "", tag:
+                file_ids = {v for v, in conn.execute(
+                    f"SELECT file_id FROM file_labels WHERE label = '{tag}' OR label LIKE '{tag}/%'")}
+            case keyword, "":
+                file_ids = [f for f, in conn.execute(
+                    f'SELECT id FROM files WHERE name like "%{keyword}%" ORDER BY vtime DESC')]
+            case keyword, tag:
+                file_ids = {v for v, in conn.execute(
+                    f"SELECT file_id FROM file_labels WHERE label = '{tag}' OR label LIKE '{tag}/%'")}
+                if file_ids:
+                    file_ids = ','.join(str(f) for f in file_ids)
+                    file_ids = [f for f, in conn.execute(
+                        f'SELECT id FROM files WHERE name like "%{keyword}%" AND id in ({file_ids}) ORDER BY vtime DESC')]
+        if file_ids:
+            file_ids = ','.join(str(f) for f in file_ids)
+            files: list[File] = [get_file(conn, record) for record in conn.execute(
+                f"SELECT id, name, path, is_dir, ctime, vtime, icon, description FROM files WHERE id in ({file_ids}) ORDER BY vtime DESC")]
         else:
-            file_ids = [f for f, in conn.execute(
-                "SELECT id FROM files ORDER BY vtime DESC LIMIT 50")]
-        file_ids = ','.join(str(f) for f in file_ids)
-
-        files: List[File] = [get_file(conn, record) for record in conn.execute(
-            f"SELECT id, name, path, is_dir, ctime, vtime, icon, description FROM files WHERE id in ({file_ids}) ORDER BY vtime DESC")]
-
+            files = []
         self.table.showFiles(files)
-
-    def check_complete(self, e: QtGui.QKeyEvent):
-        match e.key():
-            case 32:
-                return self.complete()
-
-        QtWidgets.QLineEdit.keyPressEvent(self.tagLineEdit, e)
-
-    def complete(self):
-        logv("COMPLETE")
-        completer = self.tagLineEdit.completer()
-        if completer.currentRow() >= 0:
-            tag = completer.currentCompletion()
-            self.tagLineEdit.setText("")
-            self.add_tag(tag)
-
-    def add_tag(self, tag: str):
-        tags = [self.tagListWidget.item(i).text()
-                for i in range(self.tagListWidget.count())]
-
-        logv("TAG", f"add '{tag}' to '{','.join(tags)}'")
-        if tag not in tags:
-            self.tagListWidget.addItem(QtWidgets.QListWidgetItem(self.style().standardIcon(
-                QtWidgets.QStyle.SP_TitleBarCloseButton), tag))
-            self.search()
-
-    def remove_tag(self, item: QtWidgets.QListWidgetItem):
-        ind = self.tagListWidget.indexFromItem(item)
-        self.tagListWidget.takeItem(ind.row())
-        self.search()
 
     def doubleclick_tag(self, item: QtWidgets.QTreeWidgetItem):
         tag = []
         while item:
             tag.append(item.text(0))
             item = item.parent()
-        while self.tagListWidget.count():
-            self.tagListWidget.takeItem(0)
-        self.add_tag('/'.join(reversed(tag)))
+        self.tagLabel.setText('/'.join(reversed(tag)))
+        self.search()
+
+    def clear_tag(self):
+        self.tagLabel.setText("")
+        self.search()
 
     def __del__(self):
         conn = self.setting.conn
@@ -297,7 +272,7 @@ class FileTable(QtWidgets.QTableWidget):
                 b = QtCore.QByteArray()
                 buffer = QtCore.QBuffer(b)
                 buffer.open(QtCore.QIODevice.WriteOnly)
-                icon.pixmap(10, 10, QtGui.QIcon.Mode.Normal).save(
+                icon.pixmap(20, 20, QtGui.QIcon.Mode.Normal).save(
                     buffer, 'PNG')
                 buffer.close()
                 f.icon = base64.b64encode(b.data())
@@ -406,11 +381,3 @@ def get_file(conn: sqlite3.Connection, args):
     tags = [tag for tag, in conn.execute(
         "SELECT label FROM file_labels WHERE file_id = ?", (id,))]
     return File(id, name, str(path), is_dir, tags, datetime.fromisoformat(ctime), icon, description)
-
-
-def tag_mime_data(items: List[QtWidgets.QTableWidgetItem]):
-    for item in items:
-        if not item.column():
-            data = QtCore.QMimeData()
-            data.setText(item.text())
-            return data

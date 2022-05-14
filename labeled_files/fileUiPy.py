@@ -57,6 +57,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             partial(subprocess.Popen, f'explorer /select,"{setting.get_absolute_path(file.path)}"'))
         self.cancelPushButton.clicked.connect(lambda: self.close())
         self.confirmPushButton.clicked.connect(self.confirm)
+        self.iconFolderPushButton.clicked.connect(self.folder_choose)
         self.iconChoosePushButton.clicked.connect(self.icon_choose)
         self.iconImageChoosePushButton.clicked.connect(self.image_choose)
 
@@ -91,9 +92,12 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                     "DELETE FROM file_labels WHERE file_id = ? AND label = ?",
                     [(file.id, tag) for tag in tags - new_tags])
 
-        self.setting.update_completer()
         self.reshow.emit(file.id)
         self.close()
+
+    def folder_choose(self):
+        self.iconLabel.setPixmap(QtWidgets.QFileIconProvider().icon(
+            QtWidgets.QFileIconProvider.IconType.Folder).pixmap(20, 20, QtGui.QIcon.Mode.Normal))
 
     def icon_choose(self):
         f, typ = QtWidgets.QFileDialog.getOpenFileName(self, "choose an icon", str(

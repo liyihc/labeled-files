@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
+from tkinter.ttk import Treeview
 from typing import DefaultDict, Dict
-from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QHeaderView
 
 
 @dataclass
@@ -19,11 +19,8 @@ class Node:
         node = self.sub_nodes[part]
         node.build_node(label[ind + 1:] if ind > 0 else "", count)
 
-    def build_tree(self, root: QTreeWidget | QTreeWidgetItem, expand: bool):
-        items = sorted(self.sub_nodes.items(),
-                       key=lambda item: item[1].count, reverse=True)
-        for key, node in items:
-            item = QTreeWidgetItem(root)
+    def build_tree(self, tree_view: Treeview, prefix: str = ""):
+        for key, node in self.sub_nodes.items():
             if len(node.sub_nodes) == 1:
                 path = [key]
                 while len(node.sub_nodes) == 1:
@@ -35,20 +32,17 @@ class Node:
                     else:
                         break
                 key = '/'.join(path)
-            item.setText(0, key)
-            item.setText(1, str(node.count))
-            if node.sub_nodes and expand:
-                item.setExpanded(True)
-            node.build_tree(item, False)
+            complete = f"{prefix}/{key}" if prefix else key
+            tree_view.insert(
+                prefix, 'end', complete, text=key, values=(node.count,), open=len(node.sub_nodes))
+            node.build_tree(tree_view, complete)
 
 
-def build_tree(treeWidget: QTreeWidget, labels: list[tuple[str, int]]):
+def build_tree(tree_view: Treeview, labels: list[tuple[str, int]]):
     root = Node()
     for label, count in labels:
         root.build_node(label, count)
 
-    treeWidget.clear()
-    treeWidget.header().setSectionResizeMode(
-        0, QHeaderView.ResizeMode.ResizeToContents)
+    tree_view.delete(*tree_view.get_children())
 
-    root.build_tree(treeWidget, len(root.sub_nodes) < 10)
+    root.build_tree(tree_view)
