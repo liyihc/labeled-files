@@ -42,7 +42,6 @@ def logv(tag: str, message: str = ""):
 class Setting:
     root_path: pathlib.Path = None
     conn: sqlite3.Connection = None
-    tags: List[str] = field(default_factory=list)
 
     def connect_to(self, path: Union[str, pathlib.Path]):
         path = pathlib.Path(path)

@@ -49,9 +49,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.menu.addSeparator()
         for space, path in self.config.workspaces.items():
-            action = QtGui.QAction(space, self)
-            action.triggered.connect(partial(self.change_workspace, path))
-            self.menu.addAction(action)
+            self.menu.addAction(space).triggered.connect(partial(self.change_workspace, path))
 
         self.table = FileTable(self.setting, self)
         self.fileVerticalLayout.addWidget(self.table)
