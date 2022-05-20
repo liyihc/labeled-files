@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>303</width>
+    <width>331</width>
     <height>440</height>
    </rect>
   </property>
@@ -109,9 +109,9 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="iconFolderPushButton">
+         <widget class="QPushButton" name="iconDefaultPushButton">
           <property name="text">
-           <string>文件夹图标</string>
+           <string>默认图标</string>
           </property>
          </widget>
         </item>
@@ -161,7 +161,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>303</width>
+     <width>331</width>
      <height>22</height>
     </rect>
    </property>

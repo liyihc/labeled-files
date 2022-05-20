@@ -24,7 +24,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(303, 440)
+        MainWindow.resize(331, 440)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -105,10 +105,10 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addWidget(self.iconLabel)
 
-        self.iconFolderPushButton = QPushButton(self.centralwidget)
-        self.iconFolderPushButton.setObjectName(u"iconFolderPushButton")
+        self.iconDefaultPushButton = QPushButton(self.centralwidget)
+        self.iconDefaultPushButton.setObjectName(u"iconDefaultPushButton")
 
-        self.horizontalLayout_2.addWidget(self.iconFolderPushButton)
+        self.horizontalLayout_2.addWidget(self.iconDefaultPushButton)
 
         self.iconChoosePushButton = QPushButton(self.centralwidget)
         self.iconChoosePushButton.setObjectName(u"iconChoosePushButton")
@@ -144,7 +144,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 303, 22))
+        self.menubar.setGeometry(QRect(0, 0, 331, 22))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -167,7 +167,7 @@ class Ui_MainWindow(object):
         self.dateTimeEdit.setDisplayFormat(QCoreApplication.translate("MainWindow", u"yy/MM/dd HH:mm:ss", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"\u56fe\u6807", None))
         self.iconLabel.setText(QCoreApplication.translate("MainWindow", u"\u65e0\u56fe\u6807", None))
-        self.iconFolderPushButton.setText(QCoreApplication.translate("MainWindow", u"\u6587\u4ef6\u5939\u56fe\u6807", None))
+        self.iconDefaultPushButton.setText(QCoreApplication.translate("MainWindow", u"\u9ed8\u8ba4\u56fe\u6807", None))
         self.iconChoosePushButton.setText(QCoreApplication.translate("MainWindow", u"\u9009\u62e9\u56fe\u6807", None))
         self.iconImageChoosePushButton.setText(QCoreApplication.translate("MainWindow", u"\u9009\u62e9\u56fe\u7247", None))
         self.cancelPushButton.setText(QCoreApplication.translate("MainWindow", u"\u53d6\u6d88", None))

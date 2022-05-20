@@ -1,23 +1,17 @@
 from __future__ import annotations
 import base64
 
-import os
 import pathlib
-import random
-import shutil
-import sqlite3
-import subprocess
-from datetime import datetime
-from functools import partial, reduce
+from functools import partial
 from typing import List
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from .fileUiPy import File
-from .fileUiPy import Window as FileWin
+from .sql import File
 from .mainUi import Ui_MainWindow
 from .setting import Config, Setting, VERSION, logv
 from .tree import build_tree
+from .path_types import path_handler_factories, init_handlers
 import sys
 
 
@@ -29,8 +23,6 @@ def except_hook(exc_type, exc_value, exc_traceback):
 
 
 sys.excepthook = except_hook
-
-need_icon_suffixes = {".exe", "", ".lnk"}
 
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -49,7 +41,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.menu.addSeparator()
         for space, path in self.config.workspaces.items():
-            self.menu.addAction(space).triggered.connect(partial(self.change_workspace, path))
+            self.menu.addAction(space).triggered.connect(
+                partial(self.change_workspace, path))
 
         self.table = FileTable(self.setting, self)
         self.fileVerticalLayout.addWidget(self.table)
@@ -63,6 +56,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         default = self.config.workspaces.get(self.config.default, None)
         if default:
             self.setting.set_root(default)
+        init_handlers(self.setting)
 
     def open_workspace(self):
         ret = QtWidgets.QFileDialog.getExistingDirectory(
@@ -123,8 +117,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                         f'SELECT id FROM files WHERE name like "%{keyword}%" AND id in ({file_ids}) ORDER BY vtime DESC')]
         if file_ids:
             file_ids = ','.join(str(f) for f in file_ids)
-            files: list[File] = [get_file(conn, record) for record in conn.execute(
-                f"SELECT id, name, path, is_dir, ctime, vtime, icon, description FROM files WHERE id in ({file_ids}) ORDER BY vtime DESC")]
+            files = conn.fetch_files(
+                f"SELECT * FROM files WHERE id in ({file_ids}) ORDER BY vtime DESC")
         else:
             files = []
         self.table.showFiles(files)
@@ -179,23 +173,11 @@ class FileTable(QtWidgets.QTableWidget):
         else:
             results = self.files
         self.setRowCount(len(results))
-        icon_provider = QtWidgets.QFileIconProvider()
         for row, file in enumerate(results):
-            self.showFileAt(row, file, icon_provider)
+            self.showat(row, file)
 
-    def showFileAt(self, row, f: File, icon_provider: QtWidgets.QFileIconProvider = None):
-        if f.icon:
-            pixmap = QtGui.QPixmap()
-            pixmap.loadFromData(base64.b64decode(f.icon))
-            icon = QtGui.QIcon(pixmap)
-        else:
-            if not icon_provider:
-                icon_provider = QtWidgets.QFileIconProvider()
-            if f.is_dir:
-                icon = icon_provider.icon(icon_provider.IconType.Folder)
-            else:
-                p = QtCore.QFileInfo(pathlib.Path(f.path).name)
-                icon = icon_provider.icon(p)
+    def showat(self, row: int, f: File):
+        icon = f.handler.get_icon()
         item = QtWidgets.QTableWidgetItem(icon, f.name)
         self.setItem(row, 0, item)
         self.setItem(row, 1, QtWidgets.QTableWidgetItem(
@@ -205,81 +187,41 @@ class FileTable(QtWidgets.QTableWidget):
         self.setItem(row, 3, QtWidgets.QTableWidgetItem(f.description))
 
     def dragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
-        # 或者图片、在线文件也可进行下载
         data = event.mimeData()
         text = data.text().splitlines()
-        if text and text[0].startswith("file:///"):
-            event.accept()
+        if text:
+            for handler in path_handler_factories.values():
+                if handler.mime_acceptable(text[0]):
+                    event.accept()
 
     def dragMoveEvent(self, e: QtGui.QDragMoveEvent) -> None:
         if e.pos().y() < self.height() / 2:
             if e.pos().x() < self.width() / 2:
-                # 如果不是文件，则不要accept，因为这是move
                 e.setDropAction(QtCore.Qt.DropAction.MoveAction)
             else:
-                # 如果是在线数据，需要拒绝
                 e.setDropAction(QtCore.Qt.DropAction.CopyAction)
         else:
-            # 如果是在线数据，需要拒绝
             e.setDropAction(QtCore.Qt.DropAction.LinkAction)
 
     def dropEvent(self, e: QtGui.QDropEvent) -> None:
         self.dragMoveEvent(e)
 
-        match e.dropAction():
-            case QtCore.Qt.DropAction.MoveAction:
-                def func(p: pathlib.Path):
-                    while True:
-                        target_p = self.setting.root_path.joinpath(
-                            f"{p.stem} {datetime.now().strftime('%y-%m-%d %H_%M_%S')} {format(random.randint(0,9999), '05d')}{p.suffix}")
-                        if not target_p.exists():
-                            break
-                    shutil.move(p, target_p)
-                    target_p = target_p.relative_to(self.setting.root_path)
-                    return target_p
-
-            case QtCore.Qt.DropAction.CopyAction:
-                def func(p: pathlib.Path):
-                    while True:
-                        target_p = self.setting.root_path.joinpath(
-                            f"{p.stem} {datetime.now().strftime('%y-%m-%d %H_%M_%S')} {format(random.randint(0,9999), '05d')}{p.suffix}")
-                        if not target_p.exists():
-                            break
-                    if p.is_dir():
-                        shutil.copytree(p, target_p)
-                    else:
-                        shutil.copy(p, target_p)
-                    target_p = target_p.relative_to(self.setting.root_path)
-                    return target_p
-            case QtCore.Qt.DropAction.LinkAction:
-                def func(p):
-                    return p
-
+        action = e.dropAction()
         conn = self.setting.conn
         files = []
-        icon_privider = QtWidgets.QFileIconProvider()
         for file in e.mimeData().text().splitlines():
-            p = pathlib.Path(file.removeprefix("file:///"))
-            stat = p.stat()
-            f = File(None, p.name, None, p.is_dir(), [], datetime.fromtimestamp(
-                stat.st_ctime), "", "")
-            p = func(p)
-            f.path = str(p)
-            if not f.is_dir and p.suffix.lower() in need_icon_suffixes:
-                icon = icon_privider.icon(QtCore.QFileInfo(p))
-                b = QtCore.QByteArray()
-                buffer = QtCore.QBuffer(b)
-                buffer.open(QtCore.QIODevice.WriteOnly)
-                icon.pixmap(20, 20, QtGui.QIcon.Mode.Normal).save(
-                    buffer, 'PNG')
-                buffer.close()
-                f.icon = base64.b64encode(b.data())
-            with conn:
-                cur = conn.execute(
-                    f"INSERT INTO files(name, path, is_dir, ctime, vtime, icon, description) VALUES(?,?,?,?,?,?,?)",
-                    (f.name, f.path, f.is_dir, str(f.ctime), str(datetime.now()), f.icon, f.description))
-                f.id = cur.lastrowid
-            files.append(f)
+            for typ, handler in path_handler_factories.items():
+                if not handler.mime_acceptable(file):
+                    continue
+                f = handler.create_file_from_mime(file)
+                match action:
+                    case QtCore.Qt.DropAction.MoveAction:
+                        f.handler.move_to()
+                    case QtCore.Qt.DropAction.CopyAction:
+                        f.handler.copy_to()
+                conn.insert_file(f)
+                files.append(f)
+                break
 
         files.extend(self.files)
         self.showFiles(files)
@@ -303,46 +245,25 @@ class FileTable(QtWidgets.QTableWidget):
 
     def get_file_by_index(self, ind):
         f = self.files[ind]
-        self.visit(f.id)
+        self.setting.conn.visit(f.id)
         return f
 
-    def get_path_by_index(self, ind):
-        return self.setting.get_absolute_path(self.get_file_by_index(ind).path)
-
-    def visit(self, file_id):
-        with self.setting.conn:
-            self.setting.conn.execute(
-                "UPDATE files SET vtime = ? WHERE id = ?", (str(datetime.now()), file_id))
-
     def open_file(self, item: QtWidgets.QTableWidgetItem):
-        p = self.get_path_by_index(item.row())
-        if p.exists():
-            cwd = os.getcwd()
-            os.chdir(p.parent)
-            os.startfile(p)
-            os.chdir(cwd)
-        else:
-            QtWidgets.QMessageBox.information(self, "文件不存在", str(p))
+        self.get_file_by_index(item.row()).handler.open()
 
     def edit_file(self, item: QtWidgets.QTableWidgetItem):
-        win = FileWin(self.setting, self.get_file_by_index(item.row()))
-        win.show()
-        win.reshow.connect(self.reshow)
-        self.wins.append(win)
+        f = self.get_file_by_index(item.row())
+        f.handler.edit(partial(self.reshowat, f.id, item.row()))
 
-    def reshow(self, file_id):
+    def reshowat(self, file_id, row: int):
         conn = self.setting.conn
-        f = get_file(conn, conn.execute(
-            "SELECT id, name, path, is_dir, ctime, vtime, icon, description FROM files WHERE id = ? LIMIT 1", (file_id,)).fetchone())
-        for ind, rep in enumerate(self.files):
-            if rep.id == file_id:
-                self.files[ind] = f
-                self.showFileAt(ind, f)
-                break
+        f = conn.fetch_files(
+            "SELECT * FROM files WHERE id = ? ", (file_id,))[0]
+        self.files[row] = f
+        self.showat(row, f)
 
     def file_path(self, item: QtWidgets.QTableWidgetItem):
-        subprocess.Popen(
-            f'explorer /select,"{self.get_path_by_index(item.row())}"')
+        self.get_file_by_index(item.row()).handler.open_path()
 
     def del_file(self):
         rows = sorted({item.row() for item in self.selectedItems()})
@@ -352,30 +273,15 @@ class FileTable(QtWidgets.QTableWidget):
         for row in rows:
             f = self.files[row]
             ids.append(f.id)
-            p = pathlib.Path(f.path)
-            if p.is_absolute():
-                names.append(f"link-to: {f.name}")
-            else:
-                names.append(f"file: {f.name}")
+            names.append(f.handler.repr())
         match QtWidgets.QMessageBox.question(self, "是否删除以下文件？", "\n".join(names), QtWidgets.QMessageBox.Cancel, QtWidgets.QMessageBox.Ok):
             case QtWidgets.QMessageBox.Ok:
-                with conn:
-                    ids = ",".join(str(id) for id in ids)
-                    conn.execute(f"DELETE FROM files WHERE id in ({ids})")
-                    conn.execute(
-                        f"DELETE FROM file_labels WHERE file_id in ({ids})")
+                try:
                     for i in reversed(rows):
                         f = self.files.pop(i)
-                        p = pathlib.Path(f.path)
-                        if not p.is_absolute():
-                            p = self.setting.root_path.joinpath(p)
-                            if p.exists():
-                                p.unlink()
+                        f.handler.remove()
+                        conn.delete_file([f.id])
+                except:
+                    raise
+                finally:
                     self.showFiles()
-
-
-def get_file(conn: sqlite3.Connection, args):
-    id, name, path, is_dir, ctime, vtime, icon, description = args
-    tags = [tag for tag, in conn.execute(
-        "SELECT label FROM file_labels WHERE file_id = ?", (id,))]
-    return File(id, name, str(path), is_dir, tags, datetime.fromisoformat(ctime), icon, description)
