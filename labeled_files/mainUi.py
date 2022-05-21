@@ -106,12 +106,15 @@ class Ui_MainWindow(object):
         self.menubar.setGeometry(QRect(0, 0, 725, 22))
         self.menu = QMenu(self.menubar)
         self.menu.setObjectName(u"menu")
+        self.addFileMenu = QMenu(self.menubar)
+        self.addFileMenu.setObjectName(u"addFileMenu")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
         self.menubar.addAction(self.menu.menuAction())
+        self.menubar.addAction(self.addFileMenu.menuAction())
         self.menu.addAction(self.openWorkSpaceAction)
 
         self.retranslateUi(MainWindow)
@@ -138,5 +141,6 @@ class Ui_MainWindow(object):
         self.delPushButton.setShortcut(QCoreApplication.translate("MainWindow", u"Del", None))
 #endif // QT_CONFIG(shortcut)
         self.menu.setTitle(QCoreApplication.translate("MainWindow", u"\u6587\u4ef6", None))
+        self.addFileMenu.setTitle(QCoreApplication.translate("MainWindow", u"\u65b0\u589e\u8bb0\u5f55", None))
     # retranslateUi
 

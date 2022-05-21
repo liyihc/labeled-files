@@ -6,7 +6,7 @@ from packaging.version import Version
 import sqlite3
 
 from . import updater
-from .path_types import File, path_handler_factories
+from .path_types import File, path_handler_types
 
 file_types = {}
 

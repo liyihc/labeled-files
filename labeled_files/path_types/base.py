@@ -8,7 +8,7 @@ from PySide6.QtGui import QIcon, QPixmap, QScreen
 from PySide6.QtCore import QFileInfo, QByteArray, QBuffer, QIODevice
 from ..setting import Setting
 
-path_handler_factories: Dict[str, Type['BasePathHandler']] = {}
+path_handler_types: Dict[str, Type['BasePathHandler']] = {}
 
 
 @dataclass
@@ -33,7 +33,7 @@ class HandlerDescriptor:
 
     def __get__(self, obj, objtype=None) -> 'BasePathHandler':
         if isinstance(obj, File):
-            return path_handler_factories[obj.type](self.setting, obj)
+            return path_handler_types[obj.type](self.setting, obj)
         return self
 
 
@@ -41,9 +41,10 @@ class BasePathHandler(abc.ABC):
     def __init__(self, setting: Setting, file: File) -> None:
         self.setting = setting
         self.file = file
+        self.win = None
 
     @classmethod
-    def init_var(cls):
+    def init_var(cls) -> bool:
         pass
 
     @staticmethod
@@ -75,7 +76,12 @@ class BasePathHandler(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def create_file(cls) -> File:
+    def create_file_able(cls, handler_name:str) -> bool:
+        pass
+
+    @classmethod
+    @abc.abstractmethod
+    def create_file(cls, handler_name:str) -> File:
         pass
 
     @abc.abstractmethod
@@ -94,12 +100,25 @@ class BasePathHandler(abc.ABC):
     def open(self):
         pass
 
-    @abc.abstractmethod
     def edit(self, callback):
-        pass
+        from .fileUiPy import Window
+        if self.win is not None:
+            self.win.show()
+        else:
+            win = self.win = Window(
+                self.setting, self.get_widget_type()(self.file), self.file)
+            win.show()
+            win.reshow.connect(callback)
 
     @abc.abstractmethod
     def open_path(self):
+        pass
+
+    @abc.abstractmethod
+    def get_widget_type(self):
+        '''
+            Type[.fileUiPy.BaseWidget]
+        '''
         pass
 
     @abc.abstractmethod

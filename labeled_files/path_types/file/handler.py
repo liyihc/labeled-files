@@ -8,10 +8,10 @@ from pathlib import Path
 from types import ClassMethodDescriptorType
 from PySide6.QtCore import QFileInfo, QByteArray, QBuffer, QIODevice
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QFileIconProvider, QMessageBox
+from PySide6.QtWidgets import QFileIconProvider, QMessageBox, QInputDialog
 from ..base import BasePathHandler, File, Setting
 
-from .fileUiPy import Window
+from .fileUiPy import Widget
 
 need_icon_suffixes = {".exe", "", ".lnk"}
 
@@ -20,14 +20,11 @@ icon_provider: QFileIconProvider = None
 
 
 class Handler(BasePathHandler):
-    def __init__(self, setting: Setting, file: File) -> None:
-        super().__init__(setting, file)
-        self.win: Window = None
-
     @classmethod
     def init_var(cls):
         global icon_provider
         icon_provider = QFileIconProvider()
+        return True
 
     @classmethod
     def mime_acceptable(cls, mime_path: str) -> bool:
@@ -49,34 +46,49 @@ class Handler(BasePathHandler):
         return f
 
     @classmethod
-    def create_file(self) -> File:
-        # 其他类型可能会需要创建file
-        return super().create_file()
+    def create_file_able(cls, handler_type) -> bool:
+        return handler_type == "folder"
+
+    @classmethod
+    def create_file(cls, handler_type) -> File | None:
+        assert handler_type == "folder"
+        text, ok = QInputDialog.getText(None, "文件夹名", "请为新文件夹输入名称")
+        if not ok:
+            return 
+        f = File(None, text, "folder", text, [], datetime.now(), "", "")
+        path_rel: Path
+        path_abs: Path
+        path_rel, path_abs = f.handler.get_new_name()
+        path_abs.mkdir()
+        f.path = str(path_rel)
+        return f
+
+    def get_new_name(self):
+        """
+            return relative, absolute
+        """
+        p = Path(self.file.path)
+        while True:
+            target_p = self.setting.root_path.joinpath(
+                f"{p.stem} {datetime.now().strftime('%y-%m-%d %H_%M_%S')} {format(random.randint(0,9999), '05d')}{p.suffix}")
+            if not target_p.exists():
+                break
+        return target_p.relative_to(self.setting.root_path), target_p
 
     def copy_to(self):
         p = Path(self.file.path)
-        while True:
-            target_p = self.setting.root_path.joinpath(
-                f"{p.stem} {datetime.now().strftime('%y-%m-%d %H_%M_%S')} {format(random.randint(0,9999), '05d')}{p.suffix}")
-            if not target_p.exists():
-                break
+        target_rel, target_abs = self.get_new_name()
         if p.is_dir():
-            shutil.copytree(p, target_p)
+            shutil.copytree(p, target_abs)
         else:
-            shutil.copy(p, target_p)
-        target_p = target_p.relative_to(self.setting.root_path)
-        self.file.path = str(target_p)
+            shutil.copy(p, target_abs)
+        self.file.path = str(target_rel)
 
     def move_to(self):
         p = Path(self.file.path)
-        while True:
-            target_p = self.setting.root_path.joinpath(
-                f"{p.stem} {datetime.now().strftime('%y-%m-%d %H_%M_%S')} {format(random.randint(0,9999), '05d')}{p.suffix}")
-            if not target_p.exists():
-                break
-        shutil.move(p, target_p)
-        target_p = target_p.relative_to(self.setting.root_path)
-        self.file.path = str(target_p)
+        target_rel, target_abs = self.get_new_name()
+        shutil.move(p, target_abs)
+        self.file.path = str(target_rel)
 
     def get_default_icon(self) -> QIcon:
         if self.file.type == "folder":
@@ -99,15 +111,8 @@ class Handler(BasePathHandler):
         else:
             QMessageBox.information(None, "文件不存在", str(p))  # or raise error
 
-    def edit(self, callback):
-        if self.win is not None:
-            self.win.show()
-        else:
-            win = self.win = Window(self.setting, self.file)
-            win.show()
-            win.reshow.connect(callback)
-
-        return super().edit(callback)
+    def get_widget_type(self):
+        return Widget
 
     def open_path(self):
         subprocess.Popen(

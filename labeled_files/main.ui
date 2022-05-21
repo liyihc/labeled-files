@@ -141,7 +141,13 @@
     </property>
     <addaction name="openWorkSpaceAction"/>
    </widget>
+   <widget class="QMenu" name="addFileMenu">
+    <property name="title">
+     <string>新增记录</string>
+    </property>
+   </widget>
    <addaction name="menu"/>
+   <addaction name="addFileMenu"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="openWorkSpaceAction">

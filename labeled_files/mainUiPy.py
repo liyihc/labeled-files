@@ -11,7 +11,7 @@ from .sql import File
 from .mainUi import Ui_MainWindow
 from .setting import Config, Setting, VERSION, logv
 from .tree import build_tree
-from .path_types import path_handler_factories, init_handlers
+from .path_types import path_handler_types, init_handlers
 import sys
 
 
@@ -57,6 +57,10 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         if default:
             self.setting.set_root(default)
         init_handlers(self.setting)
+        for name, handler in path_handler_types.items():
+            if handler.create_file_able(name):
+                self.addFileMenu.addAction(name).triggered.connect(
+                    partial(self.add_file, name))
 
     def open_workspace(self):
         ret = QtWidgets.QFileDialog.getExistingDirectory(
@@ -135,6 +139,12 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.tagLabel.setText("")
         self.search()
 
+    def add_file(self, handler_name:str):
+        file = path_handler_types[handler_name].create_file(handler_name)
+        self.setting.conn.insert_file(file)
+        self.table.files.insert(0, file)
+        self.table.showFiles()
+
     def __del__(self):
         conn = self.setting.conn
         if conn:
@@ -190,7 +200,7 @@ class FileTable(QtWidgets.QTableWidget):
         data = event.mimeData()
         text = data.text().splitlines()
         if text:
-            for handler in path_handler_factories.values():
+            for handler in path_handler_types.values():
                 if handler.mime_acceptable(text[0]):
                     event.accept()
 
@@ -210,7 +220,7 @@ class FileTable(QtWidgets.QTableWidget):
         conn = self.setting.conn
         files = []
         for file in e.mimeData().text().splitlines():
-            for typ, handler in path_handler_factories.items():
+            for typ, handler in path_handler_types.items():
                 if not handler.mime_acceptable(file):
                     continue
                 f = handler.create_file_from_mime(file)
