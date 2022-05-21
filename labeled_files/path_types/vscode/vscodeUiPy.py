@@ -27,8 +27,8 @@ class Widget(BaseWidget, Ui_Form):
                 unquote(p.removeprefix("file://")))
         else:
             self.remoteRadioButton.setChecked(True)
-            p = unquote(self.path.removeprefix(
-                "vscode-remote://ssh-remote+")).split("/", 1)
+            p = unquote(
+                p.removeprefix("vscode-remote://")).removeprefix("ssh-remote+").split("/", 1)
             self.remoteHostLineEdit.setText(p[0])
             self.remotePathLineEdit.setText('/' + p[1])
 
