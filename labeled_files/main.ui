@@ -25,20 +25,6 @@
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="label_2">
-        <property name="text">
-         <string>标签</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="tagLabel">
-        <property name="text">
-         <string>TextLabel</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QPushButton" name="clearTagPushButton">
         <property name="text">
          <string>消除标签</string>
@@ -90,6 +76,25 @@
       </item>
       <item>
        <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QListWidget" name="tagListWidget">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="flow">
+           <enum>QListView::LeftToRight</enum>
+          </property>
+         </widget>
+        </item>
         <item>
          <layout class="QVBoxLayout" name="fileVerticalLayout"/>
         </item>

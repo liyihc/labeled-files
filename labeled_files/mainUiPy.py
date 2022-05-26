@@ -1,18 +1,18 @@
 from __future__ import annotations
-import base64
 
 import pathlib
+import sys
+from collections import Counter
 from functools import partial
 from typing import List
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from .sql import File
 from .mainUi import Ui_MainWindow
-from .setting import Config, Setting, VERSION, logv
+from .path_types import init_handlers, path_handler_types
+from .setting import VERSION, Config, Setting, logv
+from .sql import File
 from .tree import build_tree
-from .path_types import path_handler_types, init_handlers
-import sys
 
 
 def except_hook(exc_type, exc_value, exc_traceback):
@@ -30,7 +30,6 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle(f"Labeled Files {VERSION}")
-        self.tagLabel.setText("")
         self.setting = Setting()
 
         config_path = pathlib.Path("config.json")
@@ -47,6 +46,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.table = FileTable(self.setting, self)
         self.fileVerticalLayout.addWidget(self.table)
 
+        self.tagListWidget.itemClicked.connect(self.remove_tag)
         self.treeWidget.itemDoubleClicked.connect(self.doubleclick_tag)
         self.searchPushButton.clicked.connect(self.search)
         self.openWorkSpaceAction.triggered.connect(self.open_workspace)
@@ -77,45 +77,31 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         if not self.setting.root_path:
             return
         keyword = self.searchLineEdit.text().strip()
-        tag = self.tagLabel.text()
-        logv("SEARCH", f"keyword='{keyword}' tag='{tag}'")
 
-        self.search_tag(keyword, tag)
-        self.search_file(keyword, tag)
+        tags = [self.tagListWidget.item(row).text()
+                for row in range(self.tagListWidget.count())]
 
-    def search_tag(self, keyword, tag):
+        logv("SEARCH", f"keyword='{keyword}' tag='{str(tags)}'")
+
         conn = self.setting.conn
-
-        match keyword, tag:
-            case "", "":
-                where = ""
-            case keyword, "":
-                where = f"WHERE label LIKE '%{keyword}%'"
-            case "", tag:
-                where = f"WHERE label = '{tag}' OR label LIKE '{tag}/%'"
-            case keyword, tag:
-                where = f"WHERE label LIKE '%{keyword}%' AND (label LIKE '{tag}/%' OR label = '{tag}')"
-        sql = f"SELECT label, COUNT(*) FROM file_labels {where} GROUP BY label ORDER BY label"
-        tags = conn.execute(sql).fetchall()
-
-        build_tree(self.treeWidget, tags)
-
-    def search_file(self, keyword, tag):
-        conn = self.setting.conn
-        match keyword, tag:
-            case "", "":
+        match keyword, tags:
+            case "", []:
                 file_ids = [f for f, in conn.execute(
                     "SELECT id FROM files ORDER BY vtime DESC LIMIT 50")]
-            case "", tag:
-                file_ids = {v for v, in conn.execute(
-                    f"SELECT file_id FROM file_labels WHERE label = '{tag}' OR label LIKE '{tag}/%'")}
-            case keyword, "":
+            case keyword, []:
                 file_ids = [f for f, in conn.execute(
                     f'SELECT id FROM files WHERE name like "%{keyword}%" ORDER BY vtime DESC')]
-            case keyword, tag:
+            case keyword, tags:
+                tag = tags[0]
                 file_ids = {v for v, in conn.execute(
                     f"SELECT file_id FROM file_labels WHERE label = '{tag}' OR label LIKE '{tag}/%'")}
-                if file_ids:
+                for tag in tags[1:]:
+                    if file_ids:
+                        file_ids = ','.join(map(str, file_ids))
+                        file_ids = {v for v, in conn.execute(
+                            f"SELECT file_id FROM file_labels WHERE file_id in ({file_ids}) AND (label = '{tag}' OR label LIKE '{tag}/%')")}
+
+                if file_ids and keyword:
                     file_ids = ','.join(str(f) for f in file_ids)
                     file_ids = [f for f, in conn.execute(
                         f'SELECT id FROM files WHERE name like "%{keyword}%" AND id in ({file_ids}) ORDER BY vtime DESC')]
@@ -127,19 +113,57 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             files = []
         self.table.showFiles(files)
 
+        if not keyword and not tags:
+            self.show_all_tags()
+        else:
+            self.show_file_tags(files)
+
+    def show_file_tags(self, files: List[File]):
+        # SELECT label, COUNT(*) FROM file_labels WHERE file_id in file_id_list GROUP BY label ORDER BY label
+        counter = Counter()
+        for f in files:
+            counter.update(f.tags)
+        tags = list(counter.items())
+        tags.sort(key=lambda v: v[0])
+
+        build_tree(self.treeWidget, tags)
+
+    def show_all_tags(self):
+        conn = self.setting.conn
+        sql = f"SELECT label, COUNT(*) FROM file_labels GROUP BY label ORDER BY label"
+        tags = conn.execute(sql).fetchall()
+
+        build_tree(self.treeWidget, tags)
+
     def doubleclick_tag(self, item: QtWidgets.QTreeWidgetItem):
         tag = []
         while item:
             tag.append(item.text(0))
             item = item.parent()
-        self.tagLabel.setText('/'.join(reversed(tag)))
+        tag = '/'.join(reversed(tag))
+        for row in range(self.tagListWidget.count()):
+            it = self.tagListWidget.item(row)
+            text: str = it.text()
+            if text.startswith(tag):
+                return
+            elif tag.startswith(text):
+                it.setText(tag)
+                return
+
+        self.tagListWidget.addItem(QtWidgets.QListWidgetItem(
+            self.style().standardIcon(QtWidgets.QStyle.SP_TitleBarCloseButton), tag))
+        self.search()
+
+    def remove_tag(self, item: QtWidgets.QListWidgetItem):
+        self.tagListWidget.takeItem(
+            self.tagListWidget.indexFromItem(item).row())
         self.search()
 
     def clear_tag(self):
-        self.tagLabel.setText("")
+        self.tagListWidget.clear()
         self.search()
 
-    def add_file(self, handler_name:str):
+    def add_file(self, handler_name: str):
         file = path_handler_types[handler_name].create_file(handler_name)
         self.setting.conn.insert_file(file)
         self.table.files.insert(0, file)

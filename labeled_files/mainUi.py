@@ -16,10 +16,11 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QApplication, QHBoxLayout, QHeaderView, QLabel,
-    QLineEdit, QMainWindow, QMenu, QMenuBar,
-    QPushButton, QSizePolicy, QSpacerItem, QStatusBar,
-    QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QHeaderView, QLineEdit,
+    QListView, QListWidget, QListWidgetItem, QMainWindow,
+    QMenu, QMenuBar, QPushButton, QSizePolicy,
+    QSpacerItem, QStatusBar, QTreeWidget, QTreeWidgetItem,
+    QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -38,16 +39,6 @@ class Ui_MainWindow(object):
         self.searchLineEdit.setObjectName(u"searchLineEdit")
 
         self.horizontalLayout.addWidget(self.searchLineEdit)
-
-        self.label_2 = QLabel(self.centralwidget)
-        self.label_2.setObjectName(u"label_2")
-
-        self.horizontalLayout.addWidget(self.label_2)
-
-        self.tagLabel = QLabel(self.centralwidget)
-        self.tagLabel.setObjectName(u"tagLabel")
-
-        self.horizontalLayout.addWidget(self.tagLabel)
 
         self.clearTagPushButton = QPushButton(self.centralwidget)
         self.clearTagPushButton.setObjectName(u"clearTagPushButton")
@@ -75,6 +66,18 @@ class Ui_MainWindow(object):
 
         self.verticalLayout = QVBoxLayout()
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.tagListWidget = QListWidget(self.centralwidget)
+        self.tagListWidget.setObjectName(u"tagListWidget")
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.tagListWidget.sizePolicy().hasHeightForWidth())
+        self.tagListWidget.setSizePolicy(sizePolicy)
+        self.tagListWidget.setMaximumSize(QSize(16777215, 40))
+        self.tagListWidget.setFlow(QListView.LeftToRight)
+
+        self.verticalLayout.addWidget(self.tagListWidget)
+
         self.fileVerticalLayout = QVBoxLayout()
         self.fileVerticalLayout.setObjectName(u"fileVerticalLayout")
 
@@ -126,8 +129,6 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Labeled files", None))
         self.openWorkSpaceAction.setText(QCoreApplication.translate("MainWindow", u"\u6253\u5f00\u5de5\u4f5c\u533a", None))
         self.searchLineEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"\u641c\u7d22\u6587\u5b57", None))
-        self.label_2.setText(QCoreApplication.translate("MainWindow", u"\u6807\u7b7e", None))
-        self.tagLabel.setText(QCoreApplication.translate("MainWindow", u"TextLabel", None))
         self.clearTagPushButton.setText(QCoreApplication.translate("MainWindow", u"\u6d88\u9664\u6807\u7b7e", None))
         self.searchPushButton.setText(QCoreApplication.translate("MainWindow", u"\u641c\u7d22", None))
 #if QT_CONFIG(shortcut)
