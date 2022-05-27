@@ -148,6 +148,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                 return
             elif tag.startswith(text):
                 it.setText(tag)
+                self.search()
                 return
 
         self.tagListWidget.addItem(QtWidgets.QListWidgetItem(

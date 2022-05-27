@@ -39,6 +39,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.iconDefaultPushButton.clicked.connect(self.clear_image)
         self.iconChoosePushButton.clicked.connect(self.icon_choose)
         self.iconImageChoosePushButton.clicked.connect(self.image_choose)
+        self.setWindowTitle(f"{file.type}：{file.name} - {' '.join(file.tags)}")
 
     def confirm(self):
         self.sub_widget.confirm_path()
