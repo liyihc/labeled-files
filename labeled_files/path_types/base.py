@@ -19,6 +19,7 @@ class _File:
     path: str
     tags: List[str]
     ctime: datetime
+    vtime: datetime
     icon: str
     description: str
 

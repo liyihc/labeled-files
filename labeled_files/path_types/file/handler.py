@@ -36,7 +36,7 @@ class Handler(BasePathHandler):
         stat = p.stat()
         typ = "folder" if p.is_dir() else "file"
         f = File(None, p.name, typ, str(p), [], datetime.fromtimestamp(
-            stat.st_ctime), "", "")
+            stat.st_ctime), datetime.now(), "", "")
         if typ == "file" and p.suffix.lower() in need_icon_suffixes:
             icon = f.handler.get_default_icon()
             f.icon = f.handler.icon_to_b64(icon)
@@ -55,7 +55,7 @@ class Handler(BasePathHandler):
         text, ok = QInputDialog.getText(None, "文件夹名", "请为新文件夹输入名称")
         if not ok:
             return 
-        f = File(None, text, "folder", text, [], datetime.now(), "", "")
+        f = File(None, text, "folder", text, [], datetime.now(), datetime.now(), "", "")
         path_rel: Path
         path_abs: Path
         path_rel, path_abs = f.handler.get_new_name()

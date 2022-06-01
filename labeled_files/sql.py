@@ -77,6 +77,7 @@ CREATE INDEX IF NOT EXISTS files_vtime
                 row['path'],
                 self.fetch_file_tags(row['id']),
                 datetime.fromisoformat(row['ctime']),
+                datetime.fromisoformat(row['vtime']),
                 row['icon'],
                 row['description']))
         return ret

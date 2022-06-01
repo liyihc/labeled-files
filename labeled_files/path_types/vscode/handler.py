@@ -46,7 +46,7 @@ class Handler(BasePathHandler):
 
     @classmethod
     def create_file(cls, handler_name: str) -> File:
-        return File(None, "新工作区", "vscode", "", [], datetime.now(), cls.pixmap_to_b64(folder_pixmap), "")
+        return File(None, "新工作区", "vscode", "", [], datetime.now(), datetime.now(), cls.pixmap_to_b64(folder_pixmap), "")
 
     def copy_to(self):
         raise NotImplementedError()

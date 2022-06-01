@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import datetime
 
 import pathlib
 import sys
@@ -13,6 +14,7 @@ from .path_types import init_handlers, path_handler_types
 from .setting import VERSION, Config, Setting, logv
 from .sql import File
 from .tree import build_tree
+from .utils import get_shown_timedelta
 
 
 def except_hook(exc_type, exc_value, exc_traceback):
@@ -189,10 +191,10 @@ class FileTable(QtWidgets.QTableWidget):
 
         self.setHorizontalScrollMode(
             QtWidgets.QAbstractItemView.ScrollMode.ScrollPerPixel)
-        self.setColumnCount(4)
-        self.setHorizontalHeaderLabels(["文件名", "时间", "标签", "描述"])
+        self.setColumnCount(5)
+        self.setHorizontalHeaderLabels(["文件名", "种类", "标签", "上次访问时间", "描述"])
         h = self.horizontalHeader()
-        for i, size in enumerate([150, 110, 200]):
+        for i, size in enumerate([150, 50, 125, 100]):
             h.resizeSection(i, size)
 
         self.files: List[File] = []
@@ -215,11 +217,14 @@ class FileTable(QtWidgets.QTableWidget):
         icon = f.handler.get_icon()
         item = QtWidgets.QTableWidgetItem(icon, f.name)
         self.setItem(row, 0, item)
-        self.setItem(row, 1, QtWidgets.QTableWidgetItem(
-            f.ctime.strftime("%y%m%d %H:%M:%S")))
-        self.setItem(row, 2, QtWidgets.QTableWidgetItem(
-            ' '.join('#' + tag for tag in f.tags)))
-        self.setItem(row, 3, QtWidgets.QTableWidgetItem(f.description))
+        cols = [
+            f.type,  # f.handler.get_shown_name()
+            ' '.join('#' + tag for tag in f.tags),
+            get_shown_timedelta(f.vtime) + "前",
+            f.description
+        ]
+        for i, col in enumerate(cols, 1):
+            self.setItem(row, i, QtWidgets.QTableWidgetItem(col))
 
     def dragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
         data = event.mimeData()
