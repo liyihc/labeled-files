@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import List
 from packaging.version import Version
 import sqlite3
 
@@ -9,6 +8,13 @@ from . import updater
 from .path_types import File, path_handler_types
 
 file_types = {}
+
+
+@dataclass
+class PinTag:
+    tag: str
+    icon: bytes = ""
+    rank: int = 100
 
 
 class Connection:
@@ -40,6 +46,10 @@ CREATE TABLE IF NOT EXISTS files(
     vtime DATETIME,
     icon TEXT,
     description TEXT);
+CREATE TABLE IF NOT EXISTS pin_label(
+    label TEXT PRIMARY KEY,
+    icon TEXT,
+    rank INTEGER);
 CREATE TABLE IF NOT EXISTS infos(
     key VARCHAR(20) PRIMARY KEY,
     value TEXT);
@@ -60,12 +70,11 @@ CREATE INDEX IF NOT EXISTS files_vtime
     def execute(self, *args, **kwds):
         return self.conn.execute(*args, **kwds)
 
-    def fetch_files(self, *args, **kwds) -> List[File]:
+    def fetch_files(self, *args, **kwds) -> list[File]:
         """
             please use SELECT * FROM
         """
-        conn = self.conn
-        cursor = conn.execute(*args, **kwds)
+        cursor = self.conn.execute(*args, **kwds)
         cursor.row_factory = sqlite3.Row
         row: sqlite3.Row
         ret = []
@@ -82,7 +91,7 @@ CREATE INDEX IF NOT EXISTS files_vtime
                 row['description']))
         return ret
 
-    def fetch_file_tags(self, file_id: int) -> List[str]:
+    def fetch_file_tags(self, file_id: int) -> list[str]:
         return [tag for tag, in self.conn.execute("SELECT label FROM file_labels WHERE file_id = ?", (file_id, ))]
 
     def insert_file(self, f: File):
@@ -92,7 +101,7 @@ CREATE INDEX IF NOT EXISTS files_vtime
                 (f.name, f.type, f.path, str(f.ctime), str(datetime.now()), f.icon, f.description))
             f.id = cur.lastrowid
 
-    def delete_file(self, file_ids: List[str]):
+    def delete_file(self, file_ids: list[str]):
         if not file_ids:
             return
         with self.conn:
@@ -106,7 +115,7 @@ CREATE INDEX IF NOT EXISTS files_vtime
             self.conn.execute(
                 "UPDATE files SET vtime = ? WHERE id = ?", (str(datetime.now()), file_id))
 
-    def update(self, file: File):
+    def update_file(self, file: File):
         with self.conn:
             self.conn.execute(
                 "UPDATE files SET name = ?, path = ?, ctime = ?, icon = ?, description = ? WHERE id = ?", (file.name, file.path, str(file.ctime), file.icon, file.description, file.id))
@@ -120,3 +129,41 @@ CREATE INDEX IF NOT EXISTS files_vtime
                 self.conn.executemany(
                     "DELETE FROM file_labels WHERE file_id = ? AND label = ?",
                     [(file.id, tag) for tag in tags - new_tags])
+
+    def get_pin_tags(self):
+        cursor = self.conn.execute("SELECT * FROM pin_label ORDER BY rank")
+        cursor.row_factory = sqlite3.Row
+        return [
+            PinTag(
+                row['label'],
+                row['icon'],
+                row['rank'])
+            for row in cursor
+        ]
+
+    def append_pin_tag(self, tag: str):
+        if self.exist_pin_tag(tag):
+            return
+
+        max_rank = self.conn.execute(
+            "SELECT MAX(rank) FROM pin_label").fetchall()
+        if max_rank and max_rank[0][0]:
+            rank = max_rank[0][0] + 1
+        else:
+            rank = 1
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO pin_label(label, rank) VALUES(?,?)", (tag, rank))
+
+    # def remove_pin_tags(self, tags:list[str]):
+    #     if not tags:
+    #         return
+    #     with self.conn:
+    #         self.conn.execute("DELETE FROM pin_label WHERE label in (?)", (','.join(f'"{tag}"' for tag in tags),))
+
+    def remove_pin_tag(self, tag: str):
+        with self.conn:
+            self.conn.execute("DELETE FROM pin_label WHERE label = ?", (tag,))
+
+    def exist_pin_tag(self, tag: str) -> int:
+        return self.conn.execute("SELECT COUNT(*) FROM pin_label WHERE label = ?", (tag,)).fetchone()[0]

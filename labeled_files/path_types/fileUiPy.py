@@ -53,7 +53,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
         file.description = self.plainTextEdit.toPlainText()
 
-        self.setting.conn.update(file)
+        self.setting.conn.update_file(file)
 
         self.reshow.emit()
         self.close()

@@ -49,20 +49,24 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.fileVerticalLayout.addWidget(self.table)
 
         self.tagListWidget.itemClicked.connect(self.remove_tag)
-        self.treeWidget.itemDoubleClicked.connect(self.doubleclick_tag)
+
+        self.treeWidget.itemDoubleClicked.connect(self.filter_with_tag_tree_item)
+        self.treeWidget.contextMenuEvent = self.tagContextMenuEvent
+
         self.searchPushButton.clicked.connect(self.search)
         self.openWorkSpaceAction.triggered.connect(self.open_workspace)
         self.clearTagPushButton.clicked.connect(self.clear_tag)
         self.delPushButton.clicked.connect(self.table.del_file)
 
         default = self.config.workspaces.get(self.config.default, None)
-        if default:
-            self.setting.set_root(default)
         init_handlers(self.setting)
         for name, handler in path_handler_types.items():
             if handler.create_file_able(name):
                 self.addFileMenu.addAction(name).triggered.connect(
                     partial(self.add_file, name))
+
+        if default:
+            self.change_workspace(default)
 
     def open_workspace(self):
         ret = QtWidgets.QFileDialog.getExistingDirectory(
@@ -73,6 +77,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def change_workspace(self, path):
         self.setting.set_root(path)
         self.last_keyword = None
+        self.refresh_pin_tag()
         self.search()
 
     def search(self):
@@ -137,12 +142,11 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
         build_tree(self.treeWidget, tags)
 
-    def doubleclick_tag(self, item: QtWidgets.QTreeWidgetItem):
-        tag = []
-        while item:
-            tag.append(item.text(0))
-            item = item.parent()
-        tag = '/'.join(reversed(tag))
+    def filter_with_tag_tree_item(self, item:QtWidgets.QTreeWidgetItem):
+        tag = self.get_tag_from_item(item)
+        self.filter_with_tag(tag)
+
+    def filter_with_tag(self, tag: str):
         for row in range(self.tagListWidget.count()):
             it = self.tagListWidget.item(row)
             text: str = it.text()
@@ -156,6 +160,51 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.tagListWidget.addItem(QtWidgets.QListWidgetItem(
             self.style().standardIcon(QtWidgets.QStyle.SP_TitleBarCloseButton), tag))
         self.search()
+
+    def refresh_pin_tag(self):
+        # qt 官方提供了flow layout https://doc.qt.io/qtforpython/examples/example_widgets_layouts_flowlayout.html
+        layout = self.pinTagVerticalLayout
+        for i in reversed(range(layout.count())):
+            layout.itemAt(i).widget().deleteLater()
+
+        pin_tags = self.setting.conn.get_pin_tags()
+        for tag in pin_tags:
+            btn = QtWidgets.QPushButton(tag.tag)
+            layout.addWidget(btn)
+            btn.clicked.connect(partial(self.filter_with_tag, tag.tag))
+
+    def get_tag_from_item(self, item:QtWidgets.QTreeWidgetItem):
+        tag = []
+        while item:
+            tag.append(item.text(0))
+            item = item.parent()
+        return '/'.join(reversed(tag))
+
+    def pin_tag(self, tag:str):
+        self.setting.conn.append_pin_tag(tag)
+        self.refresh_pin_tag()
+
+    def unpin_tag(self, tag:str):
+        self.setting.conn.remove_pin_tag(tag)
+        self.refresh_pin_tag()
+
+    def tagContextMenuEvent(self, e: QtGui.QContextMenuEvent) -> None:
+        root_self = self
+        self = self.treeWidget
+        item = self.itemAt(e.pos())
+        if not item:
+            e.ignore()
+            return
+        menu = QtWidgets.QMenu(self)
+
+        tag = root_self.get_tag_from_item(item)
+        menu.addAction('以标签筛选').triggered.connect(
+            partial(root_self.filter_with_tag, tag))
+        menu.addAction('钉住').triggered.connect(
+            partial(root_self.pin_tag, tag))
+        if root_self.setting.conn.exist_pin_tag(tag):
+            menu.addAction('取消钉住').triggered.connect(partial(root_self.unpin_tag, tag))
+        menu.popup(e.globalPos())
 
     def remove_tag(self, item: QtWidgets.QListWidgetItem):
         self.tagListWidget.takeItem(
@@ -274,13 +323,10 @@ class FileTable(QtWidgets.QTableWidget):
             e.ignore()
             return
         menu = QtWidgets.QMenu(self)
-        open = QtGui.QAction('open', self)
-        open.triggered.connect(partial(self.open_file, item))
-        edit = QtGui.QAction('edit', self)
-        edit.triggered.connect(partial(self.edit_file, item))
-        path = QtGui.QAction('path', self)
-        path.triggered.connect(partial(self.file_path, item))
-        menu.addActions([open, edit, path])
+        menu.addAction("打开").triggered.connect(partial(self.open_file, item))
+        menu.addAction('编辑').triggered.connect(partial(self.edit_file, item))
+        menu.addAction('打开文件夹').triggered.connect(
+            partial(self.file_path, item))
         menu.popup(e.globalPos())
 
     def get_file_by_index(self, ind):

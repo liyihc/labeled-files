@@ -51,6 +51,17 @@ CREATE INDEX files_vtime ON files(vtime); """)
     conn.executemany("INSERT INTO files VALUES(?,?,?,?,?,?,?,?)", files)
     conn.execute('UPDATE infos SET value = "0.3.0" WHERE key = "version"')
 
+@Register(Version("0.3.3"))
+def update_to_0_3_3(conn:sqlite3.Connection):
+    conn.execute("""
+CREATE TABLE IF NOT EXISTS pin_label(
+    label TEXT PRIMARY KEY,
+    icon TEXT,
+    rank INTEGER);
+    """)
+    conn.execute('UPDATE infos SET value = "0.3.3" WHERE key = "version"')
+
+
 
 def update(conn: sqlite3.Connection):
     updaters.sort(key=lambda v: v[0])
