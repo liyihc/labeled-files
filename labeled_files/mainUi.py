@@ -62,10 +62,10 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_3.addWidget(self.label)
 
-        self.pinTagVerticalLayout = QVBoxLayout()
-        self.pinTagVerticalLayout.setObjectName(u"pinTagVerticalLayout")
+        self.pinTagWidget = QWidget(self.centralwidget)
+        self.pinTagWidget.setObjectName(u"pinTagWidget")
 
-        self.verticalLayout_3.addLayout(self.pinTagVerticalLayout)
+        self.verticalLayout_3.addWidget(self.pinTagWidget)
 
         self.treeWidget = QTreeWidget(self.centralwidget)
         self.treeWidget.setObjectName(u"treeWidget")

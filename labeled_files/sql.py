@@ -96,9 +96,10 @@ CREATE INDEX IF NOT EXISTS files_vtime
 
     def insert_file(self, f: File):
         with self.conn:
+            f.vtime = datetime.now()
             cur = self.conn.execute(
                 f"INSERT INTO files(name, type, path, ctime, vtime, icon, description) VALUES(?,?,?,?,?,?,?)",
-                (f.name, f.type, f.path, str(f.ctime), str(datetime.now()), f.icon, f.description))
+                (f.name, f.type, f.path, str(f.ctime), str(f.vtime), f.icon, f.description))
             f.id = cur.lastrowid
 
     def delete_file(self, file_ids: list[str]):

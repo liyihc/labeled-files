@@ -1,4 +1,5 @@
 from __future__ import annotations
+from copy import copy
 from datetime import datetime
 
 import pathlib
@@ -15,6 +16,7 @@ from .setting import VERSION, Config, Setting, logv
 from .sql import File
 from .tree import build_tree
 from .utils import get_shown_timedelta
+from .flow_layout import FlowLayout
 
 
 def except_hook(exc_type, exc_value, exc_traceback):
@@ -50,7 +52,10 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.tagListWidget.itemClicked.connect(self.remove_tag)
 
-        self.treeWidget.itemDoubleClicked.connect(self.filter_with_tag_tree_item)
+        self.pinTagLayout = FlowLayout()
+        self.pinTagWidget.setLayout(self.pinTagLayout)
+        self.treeWidget.itemDoubleClicked.connect(
+            self.filter_with_tag_tree_item)
         self.treeWidget.contextMenuEvent = self.tagContextMenuEvent
 
         self.searchPushButton.clicked.connect(self.search)
@@ -142,7 +147,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
         build_tree(self.treeWidget, tags)
 
-    def filter_with_tag_tree_item(self, item:QtWidgets.QTreeWidgetItem):
+    def filter_with_tag_tree_item(self, item: QtWidgets.QTreeWidgetItem):
         tag = self.get_tag_from_item(item)
         self.filter_with_tag(tag)
 
@@ -162,29 +167,33 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.search()
 
     def refresh_pin_tag(self):
-        # qt 官方提供了flow layout https://doc.qt.io/qtforpython/examples/example_widgets_layouts_flowlayout.html
-        layout = self.pinTagVerticalLayout
+        layout = self.pinTagLayout
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().deleteLater()
 
         pin_tags = self.setting.conn.get_pin_tags()
         for tag in pin_tags:
-            btn = QtWidgets.QPushButton(tag.tag)
+            btn = QtWidgets.QToolButton()
+            btn.setToolButtonStyle(
+                QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            btn.setIcon(self.style().standardIcon(
+                QtWidgets.QStyle.SP_FileDialogContentsView))
+            btn.setText(tag.tag)
             layout.addWidget(btn)
             btn.clicked.connect(partial(self.filter_with_tag, tag.tag))
 
-    def get_tag_from_item(self, item:QtWidgets.QTreeWidgetItem):
+    def get_tag_from_item(self, item: QtWidgets.QTreeWidgetItem):
         tag = []
         while item:
             tag.append(item.text(0))
             item = item.parent()
         return '/'.join(reversed(tag))
 
-    def pin_tag(self, tag:str):
+    def pin_tag(self, tag: str):
         self.setting.conn.append_pin_tag(tag)
         self.refresh_pin_tag()
 
-    def unpin_tag(self, tag:str):
+    def unpin_tag(self, tag: str):
         self.setting.conn.remove_pin_tag(tag)
         self.refresh_pin_tag()
 
@@ -203,7 +212,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         menu.addAction('钉住').triggered.connect(
             partial(root_self.pin_tag, tag))
         if root_self.setting.conn.exist_pin_tag(tag):
-            menu.addAction('取消钉住').triggered.connect(partial(root_self.unpin_tag, tag))
+            menu.addAction('取消钉住').triggered.connect(
+                partial(root_self.unpin_tag, tag))
         menu.popup(e.globalPos())
 
     def remove_tag(self, item: QtWidgets.QListWidgetItem):
@@ -325,14 +335,24 @@ class FileTable(QtWidgets.QTableWidget):
         menu = QtWidgets.QMenu(self)
         menu.addAction("打开").triggered.connect(partial(self.open_file, item))
         menu.addAction('编辑').triggered.connect(partial(self.edit_file, item))
+        menu.addAction("创建副本").triggered.connect(
+            partial(self.duplicate_file, item))
         menu.addAction('打开文件夹').triggered.connect(
             partial(self.file_path, item))
         menu.popup(e.globalPos())
 
-    def get_file_by_index(self, ind):
+    def get_file_by_index(self, ind: int, visit: bool = True) -> File:
         f = self.files[ind]
-        self.setting.conn.visit(f.id)
+        if visit:
+            self.setting.conn.visit(f.id)
         return f
+
+    def duplicate_file(self, item: QtWidgets.QTableWidgetItem):
+        f = copy(self.get_file_by_index(item.row(), False))
+        self.setting.conn.insert_file(f)
+        self.files.insert(0, f)
+        self.insertRow(0)
+        self.showat(0, f)
 
     def open_file(self, item: QtWidgets.QTableWidgetItem):
         self.get_file_by_index(item.row()).handler.open()

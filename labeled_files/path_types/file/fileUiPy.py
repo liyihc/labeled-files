@@ -12,9 +12,13 @@ class Widget(BaseWidget, Ui_Form):
         self.pushButton.clicked.connect(self.change_path)
 
     def change_path(self):
-        f, typ = QFileDialog.getOpenFileName(
-            self.widget, "choose a file",
-            str(self.file.handler.get_absolute_path().parent))
+        if self.file.type == "file":
+            f, typ = QFileDialog.getOpenFileName(
+                self.widget, "choose a file",
+                str(self.file.handler.get_absolute_path().parent))
+        else:
+            f = QFileDialog.getExistingDirectory(self.widget, "choose a folder", str(
+                self.file.handler.get_absolute_path().parent))
         if not f:
             return
         self.path = f

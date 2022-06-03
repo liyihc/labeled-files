@@ -25,7 +25,7 @@ class _File:
 
 
 class File(_File):
-    handler: 'HandlerDescriptor'
+    handler: 'HandlerDescriptor' # class attribute
 
 
 class HandlerDescriptor:
