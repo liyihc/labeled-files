@@ -8,17 +8,16 @@ from functools import partial
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from .fileUi import Ui_MainWindow
-from .base import Setting, File
+from .base import setting, File
 
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     reshow = QtCore.Signal()
 
-    def __init__(self, setting: Setting, widget: 'BaseWidget', file: File) -> None:
+    def __init__(self,  widget: 'BaseWidget', file: File) -> None:
         super().__init__()
         self.setupUi(self)
 
-        self.setting = setting
         self.origin_file = file
         self.idLineEdit.setText(str(file.id))
         self.nameLineEdit.setText(file.name)
@@ -53,7 +52,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
         file.description = self.plainTextEdit.toPlainText()
 
-        self.setting.conn.update_file(file)
+        setting.conn.update_file(file)
 
         self.reshow.emit()
         self.close()

@@ -9,7 +9,7 @@ from types import ClassMethodDescriptorType
 from PySide6.QtCore import QFileInfo, QByteArray, QBuffer, QIODevice
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFileIconProvider, QMessageBox, QInputDialog
-from ..base import BasePathHandler, File, Setting
+from ..base import BasePathHandler, File, setting
 
 from .fileUiPy import Widget
 
@@ -69,11 +69,11 @@ class Handler(BasePathHandler):
         """
         p = Path(self.file.path)
         while True:
-            target_p = self.setting.root_path.joinpath(
+            target_p = setting.root_path.joinpath(
                 f"{p.stem} {datetime.now().strftime('%y-%m-%d %H_%M_%S')} {format(random.randint(0,9999), '05d')}{p.suffix}")
             if not target_p.exists():
                 break
-        return target_p.relative_to(self.setting.root_path), target_p
+        return target_p.relative_to(setting.root_path), target_p
 
     def copy_to(self):
         p = Path(self.file.path)
@@ -99,7 +99,7 @@ class Handler(BasePathHandler):
         path = Path(self.file.path)
         if path.is_absolute():
             return path
-        return self.setting.root_path.joinpath(path)
+        return setting.root_path.joinpath(path)
 
     def open(self):
         p = self.get_absolute_path()

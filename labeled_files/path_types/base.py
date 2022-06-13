@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Dict, List, Type
 from PySide6.QtGui import QIcon, QPixmap, QScreen
 from PySide6.QtCore import QFileInfo, QByteArray, QBuffer, QIODevice
-from ..setting import Setting
+from ..setting import setting
 
 path_handler_types: Dict[str, Type['BasePathHandler']] = {}
 
@@ -25,22 +25,18 @@ class _File:
 
 
 class File(_File):
-    handler: 'HandlerDescriptor' # class attribute
+    handler: 'HandlerDescriptor'  # class attribute
 
 
 class HandlerDescriptor:
-    def __init__(self, setting: Setting) -> None:
-        self.setting = setting
-
     def __get__(self, obj, objtype=None) -> 'BasePathHandler':
         if isinstance(obj, File):
-            return path_handler_types[obj.type](self.setting, obj)
+            return path_handler_types[obj.type](obj)
         return self
 
 
 class BasePathHandler(abc.ABC):
-    def __init__(self, setting: Setting, file: File) -> None:
-        self.setting = setting
+    def __init__(self, file: File) -> None:
         self.file = file
         self.win = None
 
@@ -77,12 +73,12 @@ class BasePathHandler(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def create_file_able(cls, handler_name:str) -> bool:
+    def create_file_able(cls, handler_name: str) -> bool:
         pass
 
     @classmethod
     @abc.abstractmethod
-    def create_file(cls, handler_name:str) -> File:
+    def create_file(cls, handler_name: str) -> File:
         pass
 
     @abc.abstractmethod
@@ -107,7 +103,7 @@ class BasePathHandler(abc.ABC):
             self.win.show()
         else:
             win = self.win = Window(
-                self.setting, self.get_widget_type()(self.file), self.file)
+                self.get_widget_type()(self.file), self.file)
             win.show()
             win.reshow.connect(callback)
 

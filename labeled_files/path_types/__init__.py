@@ -1,10 +1,9 @@
 from typing import Dict
 from .base import HandlerDescriptor, path_handler_types, File
-from ..setting import Setting
 
 
-def init_handlers(setting: Setting):
-    File.handler = HandlerDescriptor(setting)
+def init_handlers():
+    File.handler = HandlerDescriptor()
     from . import file
 
     if file.Handler.init_var():

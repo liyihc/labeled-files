@@ -5,7 +5,7 @@ from typing import Callable, Dict, List, Tuple, Union
 import pydantic
 
 SQLITE_NAME = "LABELED_FILES.sqlite3"
-VERSION = "0.3.5"
+VERSION = "0.3.6"
 
 
 import logging
@@ -33,11 +33,13 @@ def logv(tag: str, message: str = ""):
     logger.info(f"{tag}-{message}")
 
 
-class Setting:
+class _Setting:
     def __init__(self) -> None:
         from .sql import Connection
         self.root_path: pathlib.Path = None
         self.conn: Connection = None
+        self.config: Config = None
+        self.searched_tags: List[str] = []
 
     def connect_to(self, path: Union[str, pathlib.Path]):
         from .sql import Connection
@@ -51,6 +53,29 @@ class Setting:
         self.connect_to(self.root_path.joinpath(SQLITE_NAME))
 
 
+class Proxy:
+    def __init__(self) -> None:
+        self._setting: _Setting = None
+
+    def check_init(self):
+        if self._setting is None:
+            self._setting = _Setting()
+
+    def __getattr__(self, attr):
+        self.check_init()
+        return getattr(self._setting, attr)
+
+    def __setattr__(self, __name: str, __value) -> None:
+        if __name == "_setting":
+            return super().__setattr__(__name, __value)
+        self.check_init()
+        return setattr(self._setting, __name, __value)
+
+
+setting: _Setting = Proxy()  # singleton
+
+
 class Config(pydantic.BaseModel):
     default: str = ""
     workspaces: Dict[str, pydantic.DirectoryPath] = {}
+    hide_search_tag_in_result: bool = False
