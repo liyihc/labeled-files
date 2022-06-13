@@ -60,7 +60,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.searchPushButton.clicked.connect(self.search)
         self.openWorkSpaceAction.triggered.connect(self.open_workspace)
-        self.clearTagPushButton.clicked.connect(self.clear_tag)
+        self.clearSearchPushButton.clicked.connect(self.clear_search)
         self.delPushButton.clicked.connect(self.table.del_file)
 
         default = self.config.workspaces.get(self.config.default, None)
@@ -221,7 +221,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             self.tagListWidget.indexFromItem(item).row())
         self.search()
 
-    def clear_tag(self):
+    def clear_search(self):
+        self.searchLineEdit.clear()
         self.tagListWidget.clear()
         self.search()
 
@@ -251,7 +252,7 @@ class FileTable(QtWidgets.QTableWidget):
         self.setHorizontalScrollMode(
             QtWidgets.QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.setColumnCount(5)
-        self.setHorizontalHeaderLabels(["文件名", "种类", "标签", "上次访问时间", "描述"])
+        self.setHorizontalHeaderLabels(["标签", "种类", "文件名", "上次访问时间", "描述"])
         h = self.horizontalHeader()
         for i, size in enumerate([150, 50, 125, 100]):
             h.resizeSection(i, size)
@@ -274,11 +275,12 @@ class FileTable(QtWidgets.QTableWidget):
 
     def showat(self, row: int, f: File):
         icon = f.handler.get_icon()
-        item = QtWidgets.QTableWidgetItem(icon, f.name)
+        item = QtWidgets.QTableWidgetItem(
+            icon, ' '.join('#' + tag for tag in f.tags))
         self.setItem(row, 0, item)
         cols = [
             f.type,  # f.handler.get_shown_name()
-            ' '.join('#' + tag for tag in f.tags),
+            f.name,
             get_shown_timedelta(f.vtime) + "前",
             f.description
         ]
