@@ -1,7 +1,6 @@
 from __future__ import annotations
 from copy import copy
 import dataclasses
-from datetime import datetime
 import json
 
 import pathlib
@@ -37,20 +36,6 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.setWindowTitle(f"Labeled Files {VERSION}")
 
-        config_path = pathlib.Path("config.json")
-        if config_path.exists():
-            with config_path.open('r') as f:
-                setting.config = Config(**json.load(f))
-        else:
-            setting.config = Config()
-        with config_path.open('w') as out:
-            json.dump(dataclasses.asdict(setting.config), out, indent=4)
-
-        self.menu.addSeparator()
-        for space, path in setting.config.workspaces.items():
-            self.menu.addAction(space).triggered.connect(
-                partial(self.change_workspace, path))
-
         self.table = FileTable(self)
         self.fileVerticalLayout.addWidget(self.table)
 
@@ -66,6 +51,22 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.openWorkSpaceAction.triggered.connect(self.open_workspace)
         self.clearSearchPushButton.clicked.connect(self.clear_search)
         self.delPushButton.clicked.connect(self.table.del_file)
+
+    def init_config(self):
+        config_path = pathlib.Path("config.json")
+        if config_path.exists():
+            with config_path.open('r') as f:
+                setting.config = Config(**json.load(f))
+        else:
+            setting.config = Config()
+        with config_path.open('w') as out:
+            json.dump(dataclasses.asdict(setting.config), out, indent=4)
+
+        self.menu.addSeparator()
+        for space, path in setting.config.workspaces.items():
+            self.menu.addAction(space).triggered.connect(
+                partial(self.change_workspace, path))
+
 
         default = setting.config.workspaces.get(setting.config.default, None)
         init_handlers()
