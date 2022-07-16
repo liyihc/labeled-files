@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import Dict, List, Type
 from PySide6.QtGui import QIcon, QPixmap, QScreen
 from PySide6.QtCore import QFileInfo, QByteArray, QBuffer, QIODevice
-from ..setting import setting
 
 path_handler_types: Dict[str, Type['BasePathHandler']] = {}
 

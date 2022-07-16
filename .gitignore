@@ -2,6 +2,7 @@ __pycache__
 test_folder
 .vscode
 config.json
+build-config.json
 exception.txt
 record.txt
 /build

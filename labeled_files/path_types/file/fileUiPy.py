@@ -1,6 +1,4 @@
-from pathlib import Path
 from PySide6.QtWidgets import QFileDialog
-from ..base import File
 from .fileUi import Ui_Form
 from ..fileUiPy import BaseWidget
 

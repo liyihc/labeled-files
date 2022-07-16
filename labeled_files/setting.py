@@ -1,10 +1,11 @@
+from functools import cached_property
 import pathlib
 from typing import Callable, Dict, List, Tuple, Union
 
 import dataclasses
 
 SQLITE_NAME = "LABELED_FILES.sqlite3"
-VERSION = "0.3.6"
+VERSION = "0.4.0"
 
 
 import logging
@@ -32,7 +33,7 @@ def logv(tag: str, message: str = ""):
     logger.info(f"{tag}-{message}")
 
 
-class _Setting:
+class Setting:
     def __init__(self) -> None:
         from .sql import Connection
         self.root_path: pathlib.Path = None
@@ -51,27 +52,14 @@ class _Setting:
         self.root_path = pathlib.Path(root).absolute()
         self.connect_to(self.root_path.joinpath(SQLITE_NAME))
 
-
-class Proxy:
-    def __init__(self) -> None:
-        self._setting: _Setting = None
-
-    def check_init(self):
-        if self._setting is None:
-            self._setting = _Setting()
-
-    def __getattr__(self, attr):
-        self.check_init()
-        return getattr(self._setting, attr)
-
-    def __setattr__(self, __name: str, __value) -> None:
-        if __name == "_setting":
-            return super().__setattr__(__name, __value)
-        self.check_init()
-        return setattr(self._setting, __name, __value)
+    def convert_path(self, path: pathlib.Path):
+        for k, v in self.config.path_converts.items():
+            if path.is_relative_to(k):
+                return v / path.relative_to(k)
+        return path
 
 
-setting: _Setting = Proxy()  # singleton
+setting = Setting()
 
 
 @dataclasses.dataclass
@@ -79,3 +67,19 @@ class Config:
     default: str = ""
     workspaces: Dict[str, str] = dataclasses.field(default_factory=dict)
     hide_search_tag_in_result: bool = False
+    alternative_paths: List[List[str]] = dataclasses.field(
+        default_factory=list)
+
+    @cached_property
+    def path_converts(self):
+        ret: Dict[pathlib.Path, pathlib.Path] = {}
+        for paths in self.alternative_paths:
+            for path in paths:
+                tmp = pathlib.Path(path)
+                if tmp.exists():
+                    ret.update({pathlib.Path(p): tmp for p in paths})
+                    break
+            else:
+                pass  # show info that cannot find a exist path for paths
+        return ret
+

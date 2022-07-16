@@ -1,14 +1,11 @@
 import abc
-import base64
 import copy
-import pathlib
-import subprocess
-from functools import partial
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
+from labeled_files.setting import setting
 from .fileUi import Ui_MainWindow
-from .base import setting, File
+from .base import  File
 
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):

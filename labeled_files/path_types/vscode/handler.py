@@ -1,7 +1,14 @@
+import dataclasses
 from datetime import datetime
 import os
+import platform
+import re
+from typing import Literal
+from urllib.parse import quote, unquote
 from PySide6 import QtWidgets, QtCore, QtGui
 from pathlib import Path
+
+from labeled_files.setting import setting
 
 from ..base import BasePathHandler, File
 import subprocess
@@ -12,6 +19,48 @@ folder_pixmap: QtGui.QPixmap = None
 folder_icon: QtGui.QIcon = None
 remote_pixmap: QtGui.QPixmap = None
 remote_icon: QtGui.QIcon = None
+
+
+# file+file://...
+# folder+file://...
+# workspace+remote://...
+
+template = re.compile(
+    r"^(file|folder|workspace)\+(file|vscode-remote)://(.*)")
+
+
+@dataclasses.dataclass
+class VscodePath:
+    typ: Literal["file", "folder", "workspace"]
+    protocol: Literal["file", "vscode-remote"]
+    remote_host: str
+    path: str
+
+    def to_str(self):
+        return f"{self.typ}+{self.to_vscode_cli()}"
+
+    def to_vscode_cli(self):
+        if self.protocol == "vscode-remote":
+            assert self.remote_host
+            path = f"ssh-remote+{self.remote_host}{self.path}"
+            return f"{self.protocol}://{quote(path)}"
+        if self.protocol == "file":
+            return f"{self.protocol}://{quote(self.path)}"
+
+    @classmethod
+    def from_str(self, s: str):
+        result = template.match(s)
+        if not result:
+            return VscodePath("file", "file", "", "")
+        vp = VscodePath(result.group(1), result.group(2), "", "")
+        path = unquote(result.group(3))
+        if vp.protocol == "vscode-remote":
+            path = path.removeprefix("ssh-remote+")
+            ind = path.find('/')
+            vp.remote_host, vp.path = path[:ind], path[ind:]
+        elif vp.protocol == "file":
+            vp.path = path
+        return vp
 
 
 class Handler(BasePathHandler):
@@ -59,17 +108,40 @@ class Handler(BasePathHandler):
 
     def open(self):
         if self.file.path:
-            prefix, path = self.file.path.split("+", 1)
-            if prefix == "file" or prefix == "workspace":
-                subprocess.Popen([str(vscode_instance_path), '--file-uri', path])
-            else:
-                subprocess.Popen([str(vscode_instance_path), '--folder-uri', path])
+            vp = VscodePath.from_str(self.file.path)
+            if vp.protocol == "file":
+                path = vp.path
+                if platform.system() == "Windows":
+                    path = path.removeprefix('/')
+                    path = str(setting.convert_path(Path(path)))
+                    path = '/' + path
+                else:
+                    path = str(setting.convert_path(Path(path)))
+                vp.path = path
+
+            if vp.typ == "file" or vp.typ == "workspace":
+                subprocess.Popen(
+                    [str(vscode_instance_path), '--file-uri', vp.to_vscode_cli()])
+            else:  # vp.type == "workspace"
+                subprocess.Popen(
+                    [str(vscode_instance_path), '--folder-uri', vp.to_vscode_cli()])
 
     def get_widget_type(self):
         return Widget
 
     def open_path(self):
-        pass
+        if self.file.path:
+            vp = VscodePath.from_str(self.file.path)
+            if vp.protocol == "file":
+                path = vp.path
+                if platform.system() == "Windows":
+                    path = Path(path.removeprefix('/'))
+                    path = setting.convert_path(path)
+                    subprocess.Popen(
+                        f'explorer /select,"{path}"')
+                # else:
+                #     path = setting.convert_path(path)
+                #     pass
 
     def repr(self) -> str:
         p = self.file.path

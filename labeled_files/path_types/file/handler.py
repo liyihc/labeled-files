@@ -1,15 +1,15 @@
-from base64 import b64encode
 from datetime import datetime
 import os
 import shutil
 import subprocess
 import random
 from pathlib import Path
-from types import ClassMethodDescriptorType
 from PySide6.QtCore import QFileInfo, QByteArray, QBuffer, QIODevice
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFileIconProvider, QMessageBox, QInputDialog
-from ..base import BasePathHandler, File, setting
+from labeled_files.setting import setting
+
+from ..base import BasePathHandler, File
 
 from .fileUiPy import Widget
 
@@ -54,8 +54,9 @@ class Handler(BasePathHandler):
         assert handler_type == "folder"
         text, ok = QInputDialog.getText(None, "文件夹名", "请为新文件夹输入名称")
         if not ok:
-            return 
-        f = File(None, text, "folder", text, [], datetime.now(), datetime.now(), "", "")
+            return
+        f = File(None, text, "folder", text, [],
+                 datetime.now(), datetime.now(), "", "")
         path_rel: Path
         path_abs: Path
         path_rel, path_abs = f.handler.get_new_name()
@@ -98,7 +99,7 @@ class Handler(BasePathHandler):
     def get_absolute_path(self) -> Path:
         path = Path(self.file.path)
         if path.is_absolute():
-            return path
+            path = setting.convert_path(path)
         return setting.root_path.joinpath(path)
 
     def open(self):

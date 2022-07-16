@@ -1,6 +1,8 @@
 from urllib.parse import quote, unquote
+
 from ..fileUiPy import BaseWidget
 from .vscodeUi import Ui_Form
+from . import handler
 
 
 class Widget(BaseWidget, Ui_Form):
@@ -13,24 +15,21 @@ class Widget(BaseWidget, Ui_Form):
         p = self.path
         if not p:
             return
-        prefix, p = p.split("+", 1)
-        match prefix:
+        vp = handler.VscodePath.from_str(p)
+        match vp.typ:
             case "file":
                 self.fileRadioButton.setChecked(True)
             case "folder":
                 self.folderRadioButton.setChecked(True)
             case "workspace":
                 self.workspaceRadioButton.setChecked(True)
-        if p.startswith("file"):
+        if vp.protocol == "file":
             self.localRadioButton.setChecked(True)
-            self.localLineEdit.setText(
-                unquote(p.removeprefix("file://")))
+            self.localLineEdit.setText(vp.path)
         else:
             self.remoteRadioButton.setChecked(True)
-            p = unquote(
-                p.removeprefix("vscode-remote://")).removeprefix("ssh-remote+").split("/", 1)
-            self.remoteHostLineEdit.setText(p[0])
-            self.remotePathLineEdit.setText('/' + p[1])
+            self.remoteHostLineEdit.setText(vp.remote_host)
+            self.remotePathLineEdit.setText(vp.path)
 
     def radio_change(self):
         if self.localRadioButton.isChecked():
@@ -43,26 +42,21 @@ class Widget(BaseWidget, Ui_Form):
             self.remotePathLineEdit.setEnabled(True)
 
     def confirm_path(self):
-        path = ""
         if self.localRadioButton.isChecked():
-            if self.localLineEdit.text():
-                path = self.localLineEdit.text()
-                path = path.replace("\\", "/")
-                if not path.startswith("/"):
-                    path = '/' + path
-                path = "file://" + quote(path)
+            protocol = "file"
+            host = ""
+            path = self.localLineEdit.text().replace("\\", "/")
+            if not path.startswith("/"):
+                path = '/' + path
         else:
             host = self.remoteHostLineEdit.text()
-            r_path = self.remotePathLineEdit.text()
-            if host and r_path:
-                path = "vscode-remote://" + \
-                    quote(f"ssh-remote+{host}{r_path}")
-        if path:
-            if self.fileRadioButton.isChecked():
-                prefix = "file"
-            elif self.folderRadioButton.isChecked():
-                prefix = "folder"
-            elif self.workspaceRadioButton.isChecked():
-                prefix = "workspace"
-            path = f"{prefix}+{path}"
-        self.path = path
+            path = self.remotePathLineEdit.text()
+            protocol = "vscode-remote"
+        if self.fileRadioButton.isChecked():
+            typ = "file"
+        elif self.folderRadioButton.isChecked():
+            typ = "folder"
+        elif self.workspaceRadioButton.isChecked():
+            typ = "workspace"
+        vp = handler.VscodePath(typ, protocol, host, path)
+        self.path = vp.to_str()
