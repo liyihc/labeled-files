@@ -1,8 +1,0 @@
-{
-    "default": "dir1",
-    "workspaces": {
-        "dir1": "C:\\",
-        "dir2": "C:\\"
-    },
-    "hide_search_tag_in_result": false
-}

@@ -1,8 +1,7 @@
 import pathlib
 from typing import Callable, Dict, List, Tuple, Union
 
-
-import pydantic
+import dataclasses
 
 SQLITE_NAME = "LABELED_FILES.sqlite3"
 VERSION = "0.3.6"
@@ -75,7 +74,8 @@ class Proxy:
 setting: _Setting = Proxy()  # singleton
 
 
-class Config(pydantic.BaseModel):
+@dataclasses.dataclass
+class Config:
     default: str = ""
-    workspaces: Dict[str, pydantic.DirectoryPath] = {}
+    workspaces: Dict[str, str] = dataclasses.field(default_factory=dict)
     hide_search_tag_in_result: bool = False

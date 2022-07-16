@@ -1,6 +1,8 @@
 from __future__ import annotations
 from copy import copy
+import dataclasses
 from datetime import datetime
+import json
 
 import pathlib
 import sys
@@ -37,11 +39,12 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
         config_path = pathlib.Path("config.json")
         if config_path.exists():
-            setting.config = Config.parse_file(config_path)
+            with config_path.open('r') as f:
+                setting.config = Config(**json.load(f))
         else:
             setting.config = Config()
         with config_path.open('w') as out:
-            out.write(setting.config.json(indent=4))
+            json.dump(dataclasses.asdict(setting.config), out, indent=4)
 
         self.menu.addSeparator()
         for space, path in setting.config.workspaces.items():
