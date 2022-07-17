@@ -251,7 +251,11 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             e.ignore()
             return
         tag = item.text()
-        tag = tag[:tag.rfind('/')]
+        find = tag.rfind('/')
+        if find > 0:
+            tag = tag[:find]
+        else:
+            tag = ""
         row = self.tagListWidget.indexFromItem(item).row()
         self.tagListWidget.takeItem(row)
         if tag:
