@@ -31,6 +31,11 @@ def except_hook(exc_type, exc_value, exc_traceback):
 sys.excepthook = except_hook
 
 
+# TODO: 
+# 1、支持多语言
+# 2、标签可视化
+# 3、把filetable和主界面合起来
+
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self) -> None:
         super().__init__()
