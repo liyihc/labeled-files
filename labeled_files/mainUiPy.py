@@ -1,4 +1,5 @@
 from __future__ import annotations
+from ast import keyword
 from copy import copy
 import dataclasses
 import json
@@ -7,7 +8,7 @@ import pathlib
 import sys
 from collections import Counter
 from functools import partial
-from typing import List
+from typing import List, Tuple
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
@@ -40,6 +41,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.fileVerticalLayout.addWidget(self.table)
 
         self.tagListWidget.itemClicked.connect(self.remove_tag)
+        self.tagListWidget.contextMenuEvent = self.tagListRightClicked
 
         self.pinTagLayout = FlowLayout()
         self.pinTagWidget.setLayout(self.pinTagLayout)
@@ -47,10 +49,15 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             self.filter_with_tag_tree_item)
         self.treeWidget.contextMenuEvent = self.tagContextMenuEvent
 
+        self.tagLineEdit.textChanged.connect(self.show_tags)
+        self.tagSearchClearPushButton.clicked.connect(
+            lambda: self.tagLineEdit.clear())
         self.searchPushButton.clicked.connect(self.search)
         self.openWorkSpaceAction.triggered.connect(self.open_workspace)
         self.clearSearchPushButton.clicked.connect(self.clear_search)
         self.delPushButton.clicked.connect(self.table.del_file)
+
+        self.tags: List[Tuple[str, int]] = []
 
     def init_config(self):
         config_path = pathlib.Path("config.json")
@@ -141,21 +148,30 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             counter.update(f.tags)
         tags = list(counter.items())
         tags.sort(key=lambda v: v[0])
+        self.tags = tags
 
+        self.show_tags()
+
+    def show_tags(self):
+        keyword = self.tagLineEdit.text().lower()
+        if keyword:
+            tags = [(tag, count)
+                    for tag, count in self.tags if keyword in tag.lower()]
+        else:
+            tags = self.tags
         build_tree(self.treeWidget, tags)
 
     def show_all_tags(self):
         conn = setting.conn
         sql = f"SELECT label, COUNT(*) FROM file_labels GROUP BY label ORDER BY label"
-        tags = conn.execute(sql).fetchall()
-
-        build_tree(self.treeWidget, tags)
+        self.tags = conn.execute(sql).fetchall()
+        self.show_tags()
 
     def filter_with_tag_tree_item(self, item: QtWidgets.QTreeWidgetItem):
         tag = self.get_tag_from_item(item)
         self.filter_with_tag(tag)
 
-    def filter_with_tag(self, tag: str):
+    def filter_with_tag(self, tag: str, insert_row: int = -1):
         for row in range(self.tagListWidget.count()):
             it = self.tagListWidget.item(row)
             text: str = it.text()
@@ -165,9 +181,12 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                 it.setText(tag)
                 self.search()
                 return
-
-        self.tagListWidget.addItem(QtWidgets.QListWidgetItem(
-            self.style().standardIcon(QtWidgets.QStyle.SP_TitleBarCloseButton), tag))
+        item = QtWidgets.QListWidgetItem(
+            self.style().standardIcon(QtWidgets.QStyle.SP_TitleBarCloseButton), tag)
+        if insert_row < 0:
+            self.tagListWidget.addItem(item)
+        else:
+            self.tagListWidget.insertItem(insert_row, item)
         self.search()
 
     def refresh_pin_tag(self):
@@ -213,9 +232,10 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         tag = root_self.get_tag_from_item(item)
         menu.addAction('以标签筛选').triggered.connect(
             partial(root_self.filter_with_tag, tag))
-        menu.addAction('钉住').triggered.connect(
-            partial(root_self.pin_tag, tag))
-        if setting.conn.exist_pin_tag(tag):
+        if not setting.conn.exist_pin_tag(tag):
+            menu.addAction('钉住').triggered.connect(
+                partial(root_self.pin_tag, tag))
+        else:
             menu.addAction('取消钉住').triggered.connect(
                 partial(root_self.unpin_tag, tag))
         menu.popup(e.globalPos())
@@ -224,6 +244,20 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.tagListWidget.takeItem(
             self.tagListWidget.indexFromItem(item).row())
         self.search()
+
+    def tagListRightClicked(self, e: QtGui.QContextMenuEvent):
+        item = self.tagListWidget.itemAt(e.pos())
+        if not item:
+            e.ignore()
+            return
+        tag = item.text()
+        tag = tag[:tag.rfind('/')]
+        row = self.tagListWidget.indexFromItem(item).row()
+        self.tagListWidget.takeItem(row)
+        if tag:
+            self.filter_with_tag(tag, row)
+        else:
+            self.search()
 
     def clear_search(self):
         self.searchLineEdit.clear()

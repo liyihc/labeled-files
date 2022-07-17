@@ -33,11 +33,22 @@
           <widget class="QWidget" name="pinTagWidget" native="true"/>
          </item>
          <item>
-          <widget class="QLineEdit" name="tagLineEdit">
-           <property name="placeholderText">
-            <string>搜索标签</string>
-           </property>
-          </widget>
+          <layout class="QHBoxLayout" name="horizontalLayout_4">
+           <item>
+            <widget class="QLineEdit" name="tagLineEdit">
+             <property name="placeholderText">
+              <string>搜索标签</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="tagSearchClearPushButton">
+             <property name="text">
+              <string>清除</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
          <item>
           <widget class="QTreeWidget" name="treeWidget">
@@ -91,7 +102,7 @@
           <item>
            <widget class="QPushButton" name="clearSearchPushButton">
             <property name="text">
-             <string>消除标签</string>
+             <string>清除</string>
             </property>
            </widget>
           </item>

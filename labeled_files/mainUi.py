@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'main.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.2.2
+## Created by: Qt User Interface Compiler version 6.3.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -45,10 +45,20 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_4.addWidget(self.pinTagWidget)
 
+        self.horizontalLayout_4 = QHBoxLayout()
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.tagLineEdit = QLineEdit(self.groupBox)
         self.tagLineEdit.setObjectName(u"tagLineEdit")
 
-        self.verticalLayout_4.addWidget(self.tagLineEdit)
+        self.horizontalLayout_4.addWidget(self.tagLineEdit)
+
+        self.tagSearchClearPushButton = QPushButton(self.groupBox)
+        self.tagSearchClearPushButton.setObjectName(u"tagSearchClearPushButton")
+
+        self.horizontalLayout_4.addWidget(self.tagSearchClearPushButton)
+
+
+        self.verticalLayout_4.addLayout(self.horizontalLayout_4)
 
         self.treeWidget = QTreeWidget(self.groupBox)
         self.treeWidget.setObjectName(u"treeWidget")
@@ -153,11 +163,12 @@ class Ui_MainWindow(object):
         self.openWorkSpaceAction.setText(QCoreApplication.translate("MainWindow", u"\u6253\u5f00\u5de5\u4f5c\u533a", None))
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"\u6807\u7b7e", None))
         self.tagLineEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"\u641c\u7d22\u6807\u7b7e", None))
+        self.tagSearchClearPushButton.setText(QCoreApplication.translate("MainWindow", u"\u6e05\u9664", None))
         ___qtreewidgetitem = self.treeWidget.headerItem()
         ___qtreewidgetitem.setText(1, QCoreApplication.translate("MainWindow", u"\u8ba1\u6570", None));
         ___qtreewidgetitem.setText(0, QCoreApplication.translate("MainWindow", u"\u6807\u7b7e", None));
         self.searchLineEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"\u641c\u7d22\u6587\u5b57", None))
-        self.clearSearchPushButton.setText(QCoreApplication.translate("MainWindow", u"\u6d88\u9664\u6807\u7b7e", None))
+        self.clearSearchPushButton.setText(QCoreApplication.translate("MainWindow", u"\u6e05\u9664", None))
         self.searchPushButton.setText(QCoreApplication.translate("MainWindow", u"\u641c\u7d22", None))
 #if QT_CONFIG(shortcut)
         self.searchPushButton.setShortcut(QCoreApplication.translate("MainWindow", u"Return", None))
