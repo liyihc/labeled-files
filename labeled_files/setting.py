@@ -1,11 +1,12 @@
 from functools import cached_property
+import json
 import pathlib
 from typing import Callable, Dict, List, Tuple, Union
 
 import dataclasses
 
 SQLITE_NAME = "LABELED_FILES.sqlite3"
-VERSION = "0.4.1"
+VERSION = "0.4.2"
 
 
 import logging
@@ -53,7 +54,7 @@ class Setting:
         self.connect_to(self.root_path.joinpath(SQLITE_NAME))
 
     def convert_path(self, path: pathlib.Path):
-        for k, v in self.config.path_converts.items():
+        for k, v in self.config.path_convert.items():
             if path.is_relative_to(k):
                 return v / path.relative_to(k)
         return path
@@ -67,19 +68,14 @@ class Config:
     default: str = ""
     workspaces: Dict[str, str] = dataclasses.field(default_factory=dict)
     hide_search_tag_in_result: bool = False
-    alternative_paths: List[List[str]] = dataclasses.field(
-        default_factory=list)
+    path_mapping: Dict[str, str] = dataclasses.field(default_factory=dict)
 
     @cached_property
-    def path_converts(self):
-        ret: Dict[pathlib.Path, pathlib.Path] = {}
-        for paths in self.alternative_paths:
-            for path in paths:
-                tmp = pathlib.Path(path)
-                if tmp.exists():
-                    ret.update({pathlib.Path(p): tmp for p in paths})
-                    break
-            else:
-                pass  # show info that cannot find a exist path for paths
-        return ret
+    def path_convert(self):
+        return {pathlib.Path(k): pathlib.Path(v) for k, v in self.path_mapping.items()}
 
+    @classmethod
+    def from_json(cls, s: str):
+        d: dict = json.loads(s)
+        d = {k: v for k, v in d.items() if k in cls.__dataclass_fields__}
+        return cls(**d)

@@ -8,9 +8,11 @@ import subprocess
 import zipfile
 from labeled_files.setting import VERSION
 
+# TODO: view jenkin to move this script to a stable one, use this to test, build and delivery
 
 @dataclass
 class Config:
+    test: bool = True
     build: bool = True
     zip_file: bool = True
     copy_to_target: bool = True
@@ -26,6 +28,9 @@ else:
     config = Config()
 
 CONFIG_PATH.write_text(json.dumps(asdict(config), indent=4))
+
+if config.test:
+    pass # TODO: run test
 
 if config.build:
     if not config.upx_dir:

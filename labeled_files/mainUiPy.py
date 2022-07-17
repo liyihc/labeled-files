@@ -55,8 +55,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def init_config(self):
         config_path = pathlib.Path("config.json")
         if config_path.exists():
-            with config_path.open('r') as f:
-                setting.config = Config(**json.load(f))
+            setting.config = Config.from_json(config_path.read_text())
         else:
             setting.config = Config()
         with config_path.open('w') as out:
@@ -66,7 +65,6 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         for space, path in setting.config.workspaces.items():
             self.menu.addAction(space).triggered.connect(
                 partial(self.change_workspace, path))
-
 
         default = setting.config.workspaces.get(setting.config.default, None)
         init_handlers()

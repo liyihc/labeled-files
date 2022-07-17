@@ -39,7 +39,6 @@ class App:
         default = self.config.workspaces.get(self.config.default, None)
         if default:
             self.setting.set_root(default)
-            # TODO toggle options
             self.tag_combobox["values"] = self.setting.tags
 
         self.files: list[File] = []
