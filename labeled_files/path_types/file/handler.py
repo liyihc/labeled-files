@@ -95,7 +95,11 @@ class Handler(BasePathHandler):
     def get_default_icon(self) -> QIcon:
         if self.file.type == "folder":
             return icon_provider.icon(icon_provider.IconType.Folder)
-        return icon_provider.icon(QFileInfo(Path(self.file.path).name))
+        path = self.get_absolute_path()
+        if path.suffix in need_icon_suffixes:
+            return icon_provider.icon(QFileInfo(path))
+        else:
+            return icon_provider.icon(QFileInfo(path.name))
 
     def get_absolute_path(self) -> Path:
         path = Path(self.file.path)
