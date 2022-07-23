@@ -14,6 +14,7 @@ from ..base import BasePathHandler, File
 from .fileUiPy import Widget
 
 need_icon_suffixes = {".exe", "", ".lnk"}
+EXECUTABLE = {".exe"}
 
 
 icon_provider: QFileIconProvider = None
@@ -105,10 +106,16 @@ class Handler(BasePathHandler):
     def open(self):
         p = self.get_absolute_path()
         if p.exists():
-            cwd = os.getcwd()
-            os.chdir(p.parent)
-            os.startfile(p)
-            os.chdir(cwd)
+            if p.suffix in EXECUTABLE:
+                runner = "start"
+            else:
+                runner = "explorer"
+            subprocess.Popen(
+                [runner, str(p)],
+                cwd=p.parent,
+                shell=True,
+                env=setting.get_clean_env()
+            )
         else:
             QMessageBox.information(None, "文件不存在", str(p))  # or raise error
 

@@ -1,12 +1,13 @@
 from functools import cached_property
 import json
+import os
 import pathlib
 from typing import Callable, Dict, List, Tuple, Union
 
 import dataclasses
 
 SQLITE_NAME = "LABELED_FILES.sqlite3"
-VERSION = "0.4.3"
+VERSION = "0.4.4"
 
 
 import logging
@@ -59,6 +60,11 @@ class Setting:
                 return v / path.relative_to(k)
         return path
 
+    def get_clean_env(self):
+        env = os.environ.copy()
+        env.pop("QML2_IMPORT_PATH", None)
+        env.pop("QT_PLUGIN_PATH", None)
+        return env
 
 setting = Setting()
 

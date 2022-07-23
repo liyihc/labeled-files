@@ -121,10 +121,15 @@ class Handler(BasePathHandler):
 
             if vp.typ == "file" or vp.typ == "workspace":
                 subprocess.Popen(
-                    [str(vscode_instance_path), '--file-uri', vp.to_vscode_cli()])
+                    [str(vscode_instance_path), '--file-uri', vp.to_vscode_cli()],
+                    shell=True,
+                    env=setting.get_clean_env())
             else:  # vp.type == "workspace"
                 subprocess.Popen(
-                    [str(vscode_instance_path), '--folder-uri', vp.to_vscode_cli()])
+                    [str(vscode_instance_path),
+                     '--folder-uri', vp.to_vscode_cli()],
+                    shell=True,
+                    env=setting.get_clean_env())
 
     def get_widget_type(self):
         return Widget

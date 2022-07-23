@@ -44,7 +44,8 @@ def run_test(config: Config):
     ret = pytest.main()
     if ret != 0:
         print("Test failed with code", ret)
-    return False
+        return False
+    return True
 
 
 def run_build(config: Config):
@@ -84,8 +85,11 @@ def run_copy(config: Config):
     target_dir = Path(config.target_dir)
     if target_dir.exists():
         target_config_path = target_dir / "config.json"
-        target_config = target_config_path.read_text()
-        print(target_config)
+        if target_config_path.exists():
+            target_config = target_config_path.read_text()
+            print(target_config)
+        else:
+            target_config = ""
         shutil.rmtree(target_dir)
     else:
         target_config = ""
