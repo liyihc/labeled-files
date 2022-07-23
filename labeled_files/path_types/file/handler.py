@@ -96,7 +96,7 @@ class Handler(BasePathHandler):
         if self.file.type == "folder":
             return icon_provider.icon(icon_provider.IconType.Folder)
         path = self.get_absolute_path()
-        if path.suffix in need_icon_suffixes:
+        if path.suffix.lower() in need_icon_suffixes:
             return icon_provider.icon(QFileInfo(path))
         else:
             return icon_provider.icon(QFileInfo(path.name))
@@ -110,7 +110,7 @@ class Handler(BasePathHandler):
     def open(self):
         p = self.get_absolute_path()
         if p.exists():
-            if p.suffix in EXECUTABLE:
+            if p.suffix.lower() in EXECUTABLE:
                 runner = "start"
             else:
                 runner = "explorer"

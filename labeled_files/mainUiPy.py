@@ -35,6 +35,8 @@ sys.excepthook = except_hook
 # 1、支持多语言
 # 2、标签可视化
 # 3、把filetable和主界面合起来
+# 4、为减少冲突，将访问与真正的文件区分开
+# 5、使用 https://doc.qt.io/qtforpython/PySide6/QtCore/QFileSystemWatcher.html 监听主数据库变化，并做到及时关闭数据库
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self) -> None:

@@ -1,4 +1,4 @@
-from functools import cached_property
+from functools import cache, cached_property
 import json
 import os
 import pathlib
@@ -60,10 +60,14 @@ class Setting:
                 return v / path.relative_to(k)
         return path
 
+    @cache
     def get_clean_env(self):
         env = os.environ.copy()
         env.pop("QML2_IMPORT_PATH", None)
         env.pop("QT_PLUGIN_PATH", None)
+        cwd = pathlib.Path(os.getcwd())
+        paths = [path for path in env["PATH"].split(';') if not pathlib.Path(path).is_relative_to(cwd)]
+        env["PATH"] = ";".join(paths)
         return env
 
 setting = Setting()
