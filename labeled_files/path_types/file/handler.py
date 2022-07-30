@@ -1,5 +1,5 @@
 from datetime import datetime
-import os
+from multiprocessing import Process
 import shutil
 import subprocess
 import random
@@ -110,16 +110,9 @@ class Handler(BasePathHandler):
     def open(self):
         p = self.get_absolute_path()
         if p.exists():
-            if p.suffix.lower() in EXECUTABLE:
-                runner = "start"
-            else:
-                runner = "explorer"
-            subprocess.Popen(
-                [runner, str(p)],
-                cwd=p.parent,
-                shell=True,
-                env=setting.get_clean_env()
-            )
+            process = Process(target=open_file, args=(p, setting.get_clean_env()))
+            process.start()
+            process.join()
         else:
             QMessageBox.information(None, "文件不存在", str(p))  # or raise error
 
@@ -142,3 +135,14 @@ class Handler(BasePathHandler):
             p = self.get_absolute_path()
             if p.exists():
                 p.unlink()
+
+def open_file(path:Path, env: dict):
+    import os
+
+    os.chdir(path.parent)
+    for k in os.environ:
+        if k not in env:
+            os.environ.pop(k)
+    for k, v in env.items():
+        os.environ[k] = v
+    os.startfile(path)

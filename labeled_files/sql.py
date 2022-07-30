@@ -2,8 +2,9 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from packaging.version import Version
 import sqlite3
+from typing import Union
+from PySide6.QtCore import QTimer
 
 from . import updater
 from .path_types import File
@@ -21,7 +22,9 @@ class PinTag:
 class Connection:
     def __init__(self, path: Path):
         self.path = path
-        self._conn :sqlite3.Connection = None
+        self._conn: Union[sqlite3.Connection, None] = None
+        self._timer = QTimer()
+        self._timer.timeout.connect(self.close_db)
         if not path.exists():
             self.init_db()
         else:
@@ -32,12 +35,24 @@ class Connection:
     def connect(self):
         if self._conn:
             yield self._conn
+            if self._timer.isActive():
+                self._timer.stop()
+                self._timer.start(10 * 1000)
         else:
             conn = self._conn = sqlite3.connect(self.path)
-            with conn:  # TODO: add a timer
+            print("db connect")
+            with conn:
                 yield conn
-            conn.close()
+            self._timer.start(10 * 1000)
+
+    def close_db(self):
+        if self._conn:
+            print("db close")
+            self._conn.close()
             self._conn = None
+
+    def __del__(self):
+        self.close_db()
 
     def init_db(self):
         from . import setting

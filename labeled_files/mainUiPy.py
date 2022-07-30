@@ -33,9 +33,9 @@ sys.excepthook = except_hook
 
 # TODO: 
 # 1、支持多语言
-# 2、标签可视化
+# 2、文件列表中，标签显示可视化，即名字+标签
 # 3、把filetable和主界面合起来
-# 4、为减少冲突，将访问与真正的文件区分开
+# 4、为减少冲突，将访问与真正的文件区分开，根据主机ID区分即可
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self) -> None:
@@ -282,6 +282,9 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.table.files.insert(0, file)
         self.table.showFiles()
 
+    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+        setting.conn.close_db()
+        return super().closeEvent(event)
 
 class FileTable(QtWidgets.QTableWidget):
 
