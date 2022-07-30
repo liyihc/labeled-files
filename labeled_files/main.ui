@@ -138,7 +138,48 @@
          </widget>
         </item>
         <item>
-         <layout class="QVBoxLayout" name="fileVerticalLayout"/>
+         <widget class="QTableWidget" name="filesTableWidget">
+          <property name="acceptDrops">
+           <bool>true</bool>
+          </property>
+          <property name="editTriggers">
+           <set>QAbstractItemView::NoEditTriggers</set>
+          </property>
+          <property name="horizontalScrollMode">
+           <enum>QAbstractItemView::ScrollPerPixel</enum>
+          </property>
+          <attribute name="horizontalHeaderStretchLastSection">
+           <bool>true</bool>
+          </attribute>
+          <attribute name="verticalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+          <column>
+           <property name="text">
+            <string>标签</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>种类</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>文件名</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>上次访问时间</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>描述</string>
+           </property>
+          </column>
+         </widget>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_3">

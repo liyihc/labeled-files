@@ -32,10 +32,9 @@ sys.excepthook = except_hook
 
 
 # TODO: 
-# 1、支持多语言
-# 2、文件列表中，标签显示可视化，即名字+标签
-# 3、把filetable和主界面合起来
-# 4、为减少冲突，将访问与真正的文件区分开，根据主机ID区分即可
+# - 支持多语言
+# - 文件列表中，标签显示可视化，即名字+标签
+# - 为减少冲突，将访问与真正的文件区分开，根据主机ID区分即可
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self) -> None:
@@ -43,8 +42,9 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.setWindowTitle(f"Labeled Files {VERSION}")
 
-        self.table = FileTable(self)
-        self.fileVerticalLayout.addWidget(self.table)
+        h = self.filesTableWidget.horizontalHeader()
+        for i, size in enumerate([150, 50, 125, 100]):
+            h.resizeSection(i, size)
 
         self.tagListWidget.itemClicked.connect(self.remove_tag)
         self.tagListWidget.contextMenuEvent = self.tagListRightClicked
@@ -61,8 +61,16 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.searchPushButton.clicked.connect(self.search)
         self.openWorkSpaceAction.triggered.connect(self.open_workspace)
         self.clearSearchPushButton.clicked.connect(self.clear_search)
-        self.delPushButton.clicked.connect(self.table.del_file)
+        self.filesTableWidget.itemDoubleClicked.connect(self.open_file)
 
+        self.filesTableWidget.dragEnterEvent = self.filesDragEnterEvent
+        self.filesTableWidget.dragMoveEvent = self.filesDragMoveEvent
+        self.filesTableWidget.dropEvent = self.filesDropEvent
+        self.filesTableWidget.contextMenuEvent = self.filesContextMenuEvent
+
+        self.delPushButton.clicked.connect(self.del_file)
+
+        self.files:List[File] = []
         self.tags: List[Tuple[str, int]] = []
 
     def init_config(self):
@@ -141,7 +149,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             else:
                 files = []
             setting.searched_tags = tags
-            self.table.showFiles(files)
+            self.showFiles(files)
 
             if not keyword and not tags:
                 self.show_all_tags()
@@ -286,36 +294,15 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         setting.conn.close_db()
         return super().closeEvent(event)
 
-class FileTable(QtWidgets.QTableWidget):
-
-    def __init__(self, parent=None) -> None:
-        super().__init__(parent)
-        self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
-        self.setAcceptDrops(True)
-        self.setSortingEnabled(False)
-        self.verticalHeader().setHidden(True)
-        self.horizontalHeader().setStretchLastSection(True)
-
-        self.setHorizontalScrollMode(
-            QtWidgets.QAbstractItemView.ScrollMode.ScrollPerPixel)
-        self.setColumnCount(5)
-        self.setHorizontalHeaderLabels(["标签", "种类", "文件名", "上次访问时间", "描述"])
-        h = self.horizontalHeader()
-        for i, size in enumerate([150, 50, 125, 100]):
-            h.resizeSection(i, size)
-
-        self.files: List[File] = []
-        self.itemDoubleClicked.connect(self.open_file)
-        self.wins = []
-
     def showFiles(self, results: List[File] = None):
-        self.clearContents()
-        self.setRowCount(0)
+        table = self.filesTableWidget
+        table.clearContents()
+        table.setRowCount(0)
         if results is not None:
             self.files = results
         else:
             results = self.files
-        self.setRowCount(len(results))
+        table.setRowCount(len(results))
         for row, file in enumerate(results):
             self.showat(row, file)
 
@@ -338,7 +325,8 @@ class FileTable(QtWidgets.QTableWidget):
             tags = f.tags
         item = QtWidgets.QTableWidgetItem(
             icon, ' '.join('#' + tag for tag in tags))
-        self.setItem(row, 0, item)
+        table = self.filesTableWidget
+        table.setItem(row, 0, item)
         cols = [
             f.type,  # f.handler.get_shown_name()
             f.name,
@@ -346,9 +334,9 @@ class FileTable(QtWidgets.QTableWidget):
             f.description
         ]
         for i, col in enumerate(cols, 1):
-            self.setItem(row, i, QtWidgets.QTableWidgetItem(col))
+            table.setItem(row, i, QtWidgets.QTableWidgetItem(col))
 
-    def dragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
+    def filesDragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
         data = event.mimeData()
         text = data.text().splitlines()
         if text:
@@ -356,17 +344,18 @@ class FileTable(QtWidgets.QTableWidget):
                 if handler.mime_acceptable(text[0]):
                     event.accept()
 
-    def dragMoveEvent(self, e: QtGui.QDragMoveEvent) -> None:
-        if e.pos().y() < self.height() / 2:
-            if e.pos().x() < self.width() / 2:
+    def filesDragMoveEvent(self, e: QtGui.QDragMoveEvent) -> None:
+        table = self.filesTableWidget
+        if e.pos().y() < table.height() / 2:
+            if e.pos().x() < table.width() / 2:
                 e.setDropAction(QtCore.Qt.DropAction.MoveAction)
             else:
                 e.setDropAction(QtCore.Qt.DropAction.CopyAction)
         else:
             e.setDropAction(QtCore.Qt.DropAction.LinkAction)
 
-    def dropEvent(self, e: QtGui.QDropEvent) -> None:
-        self.dragMoveEvent(e)
+    def filesDropEvent(self, e: QtGui.QDropEvent) -> None:
+        self.filesDragMoveEvent(e)
 
         action = e.dropAction()
         conn = setting.conn
@@ -391,12 +380,13 @@ class FileTable(QtWidgets.QTableWidget):
 
         e.ignore()
 
-    def contextMenuEvent(self, e: QtGui.QContextMenuEvent) -> None:
-        item = self.itemAt(e.pos())
+    def filesContextMenuEvent(self, e: QtGui.QContextMenuEvent) -> None:
+        table = self.filesTableWidget
+        item = table.itemAt(e.pos())
         if not item:
             e.ignore()
             return
-        menu = QtWidgets.QMenu(self)
+        menu = QtWidgets.QMenu(table)
         menu.addAction("打开").triggered.connect(partial(self.open_file, item))
         menu.addAction('编辑').triggered.connect(partial(self.edit_file, item))
         menu.addAction("创建副本").triggered.connect(
@@ -415,7 +405,7 @@ class FileTable(QtWidgets.QTableWidget):
         f = copy(self.get_file_by_index(item.row(), False))
         setting.conn.insert_file(f)
         self.files.insert(0, f)
-        self.insertRow(0)
+        self.filesTableWidget.insertRow(0)
         self.showat(0, f)
 
     def open_file(self, item: QtWidgets.QTableWidgetItem):
@@ -436,7 +426,7 @@ class FileTable(QtWidgets.QTableWidget):
         self.get_file_by_index(item.row()).handler.open_path()
 
     def del_file(self):
-        rows = sorted({item.row() for item in self.selectedItems()})
+        rows = sorted({item.row() for item in self.filesTableWidget.selectedItems()})
         ids = []
         names = []
         conn = setting.conn

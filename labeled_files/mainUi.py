@@ -16,11 +16,12 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QApplication, QGroupBox, QHBoxLayout, QHeaderView,
-    QLineEdit, QListView, QListWidget, QListWidgetItem,
-    QMainWindow, QMenu, QMenuBar, QPushButton,
-    QSizePolicy, QSpacerItem, QStatusBar, QTreeWidget,
-    QTreeWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QGroupBox, QHBoxLayout,
+    QHeaderView, QLineEdit, QListView, QListWidget,
+    QListWidgetItem, QMainWindow, QMenu, QMenuBar,
+    QPushButton, QSizePolicy, QSpacerItem, QStatusBar,
+    QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem,
+    QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -111,10 +112,27 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addWidget(self.tagListWidget)
 
-        self.fileVerticalLayout = QVBoxLayout()
-        self.fileVerticalLayout.setObjectName(u"fileVerticalLayout")
+        self.filesTableWidget = QTableWidget(self.centralwidget)
+        if (self.filesTableWidget.columnCount() < 5):
+            self.filesTableWidget.setColumnCount(5)
+        __qtablewidgetitem = QTableWidgetItem()
+        self.filesTableWidget.setHorizontalHeaderItem(0, __qtablewidgetitem)
+        __qtablewidgetitem1 = QTableWidgetItem()
+        self.filesTableWidget.setHorizontalHeaderItem(1, __qtablewidgetitem1)
+        __qtablewidgetitem2 = QTableWidgetItem()
+        self.filesTableWidget.setHorizontalHeaderItem(2, __qtablewidgetitem2)
+        __qtablewidgetitem3 = QTableWidgetItem()
+        self.filesTableWidget.setHorizontalHeaderItem(3, __qtablewidgetitem3)
+        __qtablewidgetitem4 = QTableWidgetItem()
+        self.filesTableWidget.setHorizontalHeaderItem(4, __qtablewidgetitem4)
+        self.filesTableWidget.setObjectName(u"filesTableWidget")
+        self.filesTableWidget.setAcceptDrops(True)
+        self.filesTableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.filesTableWidget.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.filesTableWidget.horizontalHeader().setStretchLastSection(True)
+        self.filesTableWidget.verticalHeader().setVisible(False)
 
-        self.verticalLayout.addLayout(self.fileVerticalLayout)
+        self.verticalLayout.addWidget(self.filesTableWidget)
 
         self.horizontalLayout_3 = QHBoxLayout()
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
@@ -173,6 +191,16 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(shortcut)
         self.searchPushButton.setShortcut(QCoreApplication.translate("MainWindow", u"Return", None))
 #endif // QT_CONFIG(shortcut)
+        ___qtablewidgetitem = self.filesTableWidget.horizontalHeaderItem(0)
+        ___qtablewidgetitem.setText(QCoreApplication.translate("MainWindow", u"\u6807\u7b7e", None));
+        ___qtablewidgetitem1 = self.filesTableWidget.horizontalHeaderItem(1)
+        ___qtablewidgetitem1.setText(QCoreApplication.translate("MainWindow", u"\u79cd\u7c7b", None));
+        ___qtablewidgetitem2 = self.filesTableWidget.horizontalHeaderItem(2)
+        ___qtablewidgetitem2.setText(QCoreApplication.translate("MainWindow", u"\u6587\u4ef6\u540d", None));
+        ___qtablewidgetitem3 = self.filesTableWidget.horizontalHeaderItem(3)
+        ___qtablewidgetitem3.setText(QCoreApplication.translate("MainWindow", u"\u4e0a\u6b21\u8bbf\u95ee\u65f6\u95f4", None));
+        ___qtablewidgetitem4 = self.filesTableWidget.horizontalHeaderItem(4)
+        ___qtablewidgetitem4.setText(QCoreApplication.translate("MainWindow", u"\u63cf\u8ff0", None));
         self.delPushButton.setText(QCoreApplication.translate("MainWindow", u"\u5220\u9664", None))
 #if QT_CONFIG(shortcut)
         self.delPushButton.setShortcut(QCoreApplication.translate("MainWindow", u"Del", None))
