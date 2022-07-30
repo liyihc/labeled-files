@@ -48,6 +48,7 @@ class Connection:
     def close_db(self):
         if self._conn:
             print("db close")
+            self._conn.commit()
             self._conn.close()
             self._conn = None
 
