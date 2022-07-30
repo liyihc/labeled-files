@@ -36,7 +36,6 @@ sys.excepthook = except_hook
 # 2、标签可视化
 # 3、把filetable和主界面合起来
 # 4、为减少冲突，将访问与真正的文件区分开
-# 5、使用 https://doc.qt.io/qtforpython/PySide6/QtCore/QFileSystemWatcher.html 监听主数据库变化，并做到及时关闭数据库
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self) -> None:
@@ -113,40 +112,41 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         logv("SEARCH", f"keyword='{keyword}' tag='{str(tags)}'")
 
         conn = setting.conn
-        match keyword, tags:
-            case "", []:
-                file_ids = [f for f, in conn.execute(
-                    "SELECT id FROM files ORDER BY vtime DESC LIMIT 50")]
-            case keyword, []:
-                file_ids = [f for f, in conn.execute(
-                    f'SELECT id FROM files WHERE name like "%{keyword}%" ORDER BY vtime DESC')]
-            case keyword, tags:
-                tag = tags[0]
-                file_ids = {v for v, in conn.execute(
-                    f"SELECT file_id FROM file_labels WHERE label = '{tag}' OR label LIKE '{tag}/%'")}
-                for tag in tags[1:]:
-                    if file_ids:
-                        file_ids = ','.join(map(str, file_ids))
-                        file_ids = {v for v, in conn.execute(
-                            f"SELECT file_id FROM file_labels WHERE file_id in ({file_ids}) AND (label = '{tag}' OR label LIKE '{tag}/%')")}
-
-                if file_ids and keyword:
-                    file_ids = ','.join(str(f) for f in file_ids)
+        with conn.connect():
+            match keyword, tags:
+                case "", []:
                     file_ids = [f for f, in conn.execute(
-                        f'SELECT id FROM files WHERE name like "%{keyword}%" AND id in ({file_ids}) ORDER BY vtime DESC')]
-        if file_ids:
-            file_ids = ','.join(str(f) for f in file_ids)
-            files = conn.fetch_files(
-                f"SELECT * FROM files WHERE id in ({file_ids}) ORDER BY vtime DESC")
-        else:
-            files = []
-        setting.searched_tags = tags
-        self.table.showFiles(files)
+                        "SELECT id FROM files ORDER BY vtime DESC LIMIT 50")]
+                case keyword, []:
+                    file_ids = [f for f, in conn.execute(
+                        f'SELECT id FROM files WHERE name like "%{keyword}%" ORDER BY vtime DESC')]
+                case keyword, tags:
+                    tag = tags[0]
+                    file_ids = {v for v, in conn.execute(
+                        f"SELECT file_id FROM file_labels WHERE label = '{tag}' OR label LIKE '{tag}/%'")}
+                    for tag in tags[1:]:
+                        if file_ids:
+                            file_ids = ','.join(map(str, file_ids))
+                            file_ids = {v for v, in conn.execute(
+                                f"SELECT file_id FROM file_labels WHERE file_id in ({file_ids}) AND (label = '{tag}' OR label LIKE '{tag}/%')")}
 
-        if not keyword and not tags:
-            self.show_all_tags()
-        else:
-            self.show_file_tags(files)
+                    if file_ids and keyword:
+                        file_ids = ','.join(str(f) for f in file_ids)
+                        file_ids = [f for f, in conn.execute(
+                            f'SELECT id FROM files WHERE name like "%{keyword}%" AND id in ({file_ids}) ORDER BY vtime DESC')]
+            if file_ids:
+                file_ids = ','.join(str(f) for f in file_ids)
+                files = conn.fetch_files(
+                    f"SELECT * FROM files WHERE id in ({file_ids}) ORDER BY vtime DESC")
+            else:
+                files = []
+            setting.searched_tags = tags
+            self.table.showFiles(files)
+
+            if not keyword and not tags:
+                self.show_all_tags()
+            else:
+                self.show_file_tags(files)
 
     def show_file_tags(self, files: List[File]):
         # SELECT label, COUNT(*) FROM file_labels WHERE file_id in file_id_list GROUP BY label ORDER BY label
@@ -171,7 +171,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def show_all_tags(self):
         conn = setting.conn
         sql = f"SELECT label, COUNT(*) FROM file_labels GROUP BY label ORDER BY label"
-        self.tags = conn.execute(sql).fetchall()
+        with conn.connect():
+            self.tags = conn.execute(sql).fetchall()
         self.show_tags()
 
     def filter_with_tag_tree_item(self, item: QtWidgets.QTreeWidgetItem):
@@ -281,12 +282,6 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.table.files.insert(0, file)
         self.table.showFiles()
 
-    def __del__(self):
-        conn = setting.conn
-        if conn:
-            conn.commit()
-            conn.close()
-
 
 class FileTable(QtWidgets.QTableWidget):
 
@@ -373,19 +368,20 @@ class FileTable(QtWidgets.QTableWidget):
         action = e.dropAction()
         conn = setting.conn
         files = []
-        for file in e.mimeData().text().splitlines():
-            for typ, handler in path_handler_types.items():
-                if not handler.mime_acceptable(file):
-                    continue
-                f = handler.create_file_from_mime(file)
-                match action:
-                    case QtCore.Qt.DropAction.MoveAction:
-                        f.handler.move_to()
-                    case QtCore.Qt.DropAction.CopyAction:
-                        f.handler.copy_to()
-                conn.insert_file(f)
-                files.append(f)
-                break
+        with conn.connect():
+            for file in e.mimeData().text().splitlines():
+                for typ, handler in path_handler_types.items():
+                    if not handler.mime_acceptable(file):
+                        continue
+                    f = handler.create_file_from_mime(file)
+                    match action:
+                        case QtCore.Qt.DropAction.MoveAction:
+                            f.handler.move_to()
+                        case QtCore.Qt.DropAction.CopyAction:
+                            f.handler.copy_to()
+                    conn.insert_file(f)
+                    files.append(f)
+                    break
 
         files.extend(self.files)
         self.showFiles(files)
@@ -448,10 +444,11 @@ class FileTable(QtWidgets.QTableWidget):
         match QtWidgets.QMessageBox.question(self, "是否删除以下文件？", "\n".join(names), QtWidgets.QMessageBox.Cancel, QtWidgets.QMessageBox.Ok):
             case QtWidgets.QMessageBox.Ok:
                 try:
-                    for i in reversed(rows):
-                        f = self.files.pop(i)
-                        f.handler.remove()
-                        conn.delete_file([f.id])
+                    with conn.connect():
+                        for i in reversed(rows):
+                            f = self.files.pop(i)
+                            f.handler.remove()
+                            conn.delete_file([f.id])
                 except:
                     raise
                 finally:

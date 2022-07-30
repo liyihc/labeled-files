@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
     exists, config = read_config()
     if not exists:
-        print("build-config.json was created, please check it\n rand rerun this script to continue")
+        print("build-config.json was created, please check it\n and rerun this script to continue")
         exit()
     if config.test:
         if not run_test(config):

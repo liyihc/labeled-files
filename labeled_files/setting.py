@@ -49,8 +49,6 @@ class Setting:
         self.conn = Connection(path)
 
     def set_root(self, root: str):
-        if self.conn:
-            self.conn.close()
         self.root_path = pathlib.Path(root).absolute()
         self.connect_to(self.root_path.joinpath(SQLITE_NAME))
 
