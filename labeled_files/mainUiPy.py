@@ -35,6 +35,13 @@ sys.excepthook = except_hook
 # - 支持多语言
 # - 文件列表中，标签显示可视化，即名字+标签
 # - 为减少冲突，将访问与真正的文件区分开，根据主机ID区分即可
+# - 应当支持保存浏览器网页（加一个插件）
+# - 工作区支持打开工作区
+# - 拖入文件时，自动添加相应标签
+# - 为搜索结构统一加标签
+# - 添加设置页面
+# - 支持安装
+# - 可支持修改时间（默认为创建时间）
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self) -> None:
