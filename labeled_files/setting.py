@@ -76,6 +76,7 @@ class Config:
     default: str = ""
     workspaces: Dict[str, str] = dataclasses.field(default_factory=dict)
     hide_search_tag_in_result: bool = False
+    file_name_regex: bool = False
     path_mapping: Dict[str, str] = dataclasses.field(default_factory=dict)
 
     @cached_property

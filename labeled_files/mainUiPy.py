@@ -1,10 +1,10 @@
 from __future__ import annotations
-from ast import keyword
 from copy import copy
 import dataclasses
 import json
 
 import pathlib
+import re
 import sys
 from collections import Counter
 from functools import partial
@@ -65,7 +65,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.searchPushButton.clicked.connect(self.search)
         self.openWorkSpaceAction.triggered.connect(self.workspace_open)
         self.clearSearchPushButton.clicked.connect(self.search_clear_all)
-        self.filesTableWidget.itemDoubleClicked.connect(self.file_table_file_open)
+        self.filesTableWidget.itemDoubleClicked.connect(
+            self.file_table_file_open)
 
         self.filesTableWidget.dragEnterEvent = self.file_table_DragEnterEvent
         self.filesTableWidget.dragMoveEvent = self.file_table_DragMoveEvent
@@ -335,9 +336,16 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             icon, ' '.join('#' + tag for tag in tags))
         table = self.filesTableWidget
         table.setItem(row, 0, item)
+        if setting.config.file_name_regex and f.name.startswith("r|"):
+            ret = re.search(
+                f.name.removeprefix( 'r|'),
+                pathlib.Path(f.path).name)
+            name = ret.group() if ret else ""
+        else:
+            name = f.name
         cols = [
             f.type,  # f.handler.get_shown_name()
-            f.name,
+            name,
             get_shown_timedelta(f.vtime) + "前",
             f.description
         ]
@@ -398,8 +406,10 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             e.ignore()
             return
         menu = QtWidgets.QMenu(table)
-        menu.addAction("打开").triggered.connect(partial(self.file_table_file_open, item))
-        menu.addAction('编辑').triggered.connect(partial(self.file_table_file_edit, item))
+        menu.addAction("打开").triggered.connect(
+            partial(self.file_table_file_open, item))
+        menu.addAction('编辑').triggered.connect(
+            partial(self.file_table_file_edit, item))
         menu.addAction("创建副本").triggered.connect(
             partial(self.file_table_file_duplicate, item))
         menu.addAction('打开文件夹').triggered.connect(
@@ -424,7 +434,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def file_table_file_edit(self, item: QtWidgets.QTableWidgetItem):
         f = self.file_table_get_file_by_index(item.row())
-        f.handler.edit(partial(self.file_table_show_file_from_db, f.id, item.row()))
+        f.handler.edit(
+            partial(self.file_table_show_file_from_db, f.id, item.row()))
 
     def file_table_show_file_from_db(self, file_id, row: int):
         conn = setting.conn
