@@ -31,17 +31,14 @@ def except_hook(exc_type, exc_value, exc_traceback):
 sys.excepthook = except_hook
 
 
-# TODO: 
+# TODO:
 # - 支持多语言
 # - 文件列表中，标签显示可视化，即名字+标签
 # - 为减少冲突，将访问与真正的文件区分开，根据主机ID区分即可
-# - 应当支持保存浏览器网页（加一个插件）
-# - 工作区支持打开工作区
-# - 拖入文件时，自动添加相应标签
-# - 为搜索结构统一加标签
-# - 添加设置页面
+# - 文件类型应当支持保存浏览器网页（加一个插件）
+
+# FUTURE
 # - 支持安装
-# - 可支持修改时间（默认为创建时间）
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self) -> None:
@@ -53,34 +50,34 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         for i, size in enumerate([150, 50, 125, 100]):
             h.resizeSection(i, size)
 
-        self.tagListWidget.itemClicked.connect(self.remove_tag)
-        self.tagListWidget.contextMenuEvent = self.tagListRightClicked
+        self.tagListWidget.itemClicked.connect(self.search_tag_remove)
+        self.tagListWidget.contextMenuEvent = self.search_tag_RightClicked
 
         self.pinTagLayout = FlowLayout()
         self.pinTagWidget.setLayout(self.pinTagLayout)
         self.treeWidget.itemDoubleClicked.connect(
-            self.filter_with_tag_tree_item)
-        self.treeWidget.contextMenuEvent = self.tagContextMenuEvent
+            self.tag_tree_item_append)
+        self.treeWidget.contextMenuEvent = self.tag_tree_ContextMenuEvent
 
-        self.tagLineEdit.textChanged.connect(self.show_tags)
+        self.tagLineEdit.textChanged.connect(self.tag_tree_show)
         self.tagSearchClearPushButton.clicked.connect(
             lambda: self.tagLineEdit.clear())
         self.searchPushButton.clicked.connect(self.search)
-        self.openWorkSpaceAction.triggered.connect(self.open_workspace)
-        self.clearSearchPushButton.clicked.connect(self.clear_search)
-        self.filesTableWidget.itemDoubleClicked.connect(self.open_file)
+        self.openWorkSpaceAction.triggered.connect(self.workspace_open)
+        self.clearSearchPushButton.clicked.connect(self.search_clear_all)
+        self.filesTableWidget.itemDoubleClicked.connect(self.file_table_file_open)
 
-        self.filesTableWidget.dragEnterEvent = self.filesDragEnterEvent
-        self.filesTableWidget.dragMoveEvent = self.filesDragMoveEvent
-        self.filesTableWidget.dropEvent = self.filesDropEvent
-        self.filesTableWidget.contextMenuEvent = self.filesContextMenuEvent
+        self.filesTableWidget.dragEnterEvent = self.file_table_DragEnterEvent
+        self.filesTableWidget.dragMoveEvent = self.file_table_DragMoveEvent
+        self.filesTableWidget.dropEvent = self.file_table_DropEvent
+        self.filesTableWidget.contextMenuEvent = self.file_table_ContextMenuEvent
 
-        self.delPushButton.clicked.connect(self.del_file)
+        self.delPushButton.clicked.connect(self.file_table_file_del)
 
-        self.files:List[File] = []
+        self.files: List[File] = []
         self.tags: List[Tuple[str, int]] = []
 
-    def init_config(self):
+    def config_init(self):
         config_path = pathlib.Path("config.json")
         if config_path.exists():
             setting.config = Config.from_json(config_path.read_text())
@@ -92,28 +89,28 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.menu.addSeparator()
         for space, path in setting.config.workspaces.items():
             self.menu.addAction(space).triggered.connect(
-                partial(self.change_workspace, path))
+                partial(self.workspace_change, path))
 
         default = setting.config.workspaces.get(setting.config.default, None)
         init_handlers()
         for name, handler in path_handler_types.items():
             if handler.create_file_able(name):
                 self.addFileMenu.addAction(name).triggered.connect(
-                    partial(self.add_file, name))
+                    partial(self.file_table_create_file, name))
 
         if default:
-            self.change_workspace(default)
+            self.workspace_change(default)
 
-    def open_workspace(self):
+    def workspace_open(self):
         ret = QtWidgets.QFileDialog.getExistingDirectory(
             caption="open a folder as workspace")
         if ret:
-            self.change_workspace(ret)
+            self.workspace_change(ret)
 
-    def change_workspace(self, path):
+    def workspace_change(self, path):
         setting.set_root(path)
         self.last_keyword = None
-        self.refresh_pin_tag()
+        self.pin_tag_refresh()
         self.search()
 
     def search(self):
@@ -121,8 +118,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             return
         keyword = self.searchLineEdit.text().strip()
 
-        tags = [self.tagListWidget.item(row).text()
-                for row in range(self.tagListWidget.count())]
+        tags = self.search_tag_get()
 
         logv("SEARCH", f"keyword='{keyword}' tag='{str(tags)}'")
 
@@ -156,14 +152,18 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             else:
                 files = []
             setting.searched_tags = tags
-            self.showFiles(files)
+            self.file_table_show_files(files)
 
             if not keyword and not tags:
-                self.show_all_tags()
+                self.tag_tree_show_all()
             else:
-                self.show_file_tags(files)
+                self.tag_tree_show_files(files)
 
-    def show_file_tags(self, files: List[File]):
+    def search_tag_get(self):
+        return [self.tagListWidget.item(row).text()
+                for row in range(self.tagListWidget.count())]
+
+    def tag_tree_show_files(self, files: List[File]):
         # SELECT label, COUNT(*) FROM file_labels WHERE file_id in file_id_list GROUP BY label ORDER BY label
         counter = Counter()
         for f in files:
@@ -172,9 +172,9 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         tags.sort(key=lambda v: v[0])
         self.tags = tags
 
-        self.show_tags()
+        self.tag_tree_show()
 
-    def show_tags(self):
+    def tag_tree_show(self):
         keyword = self.tagLineEdit.text().lower()
         if keyword:
             tags = [(tag, count)
@@ -183,18 +183,18 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             tags = self.tags
         build_tree(self.treeWidget, tags)
 
-    def show_all_tags(self):
+    def tag_tree_show_all(self):
         conn = setting.conn
         sql = f"SELECT label, COUNT(*) FROM file_labels GROUP BY label ORDER BY label"
         with conn.connect():
             self.tags = conn.execute(sql).fetchall()
-        self.show_tags()
+        self.tag_tree_show()
 
-    def filter_with_tag_tree_item(self, item: QtWidgets.QTreeWidgetItem):
-        tag = self.get_tag_from_item(item)
-        self.filter_with_tag(tag)
+    def tag_tree_item_append(self, item: QtWidgets.QTreeWidgetItem):
+        tag = self.tag_tree_get_from_item(item)
+        self.search_tag_insert(tag)
 
-    def filter_with_tag(self, tag: str, insert_row: int = -1):
+    def search_tag_insert(self, tag: str, insert_row: int = -1):
         for row in range(self.tagListWidget.count()):
             it = self.tagListWidget.item(row)
             text: str = it.text()
@@ -212,7 +212,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             self.tagListWidget.insertItem(insert_row, item)
         self.search()
 
-    def refresh_pin_tag(self):
+    def pin_tag_refresh(self):
         layout = self.pinTagLayout
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().deleteLater()
@@ -226,24 +226,24 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                 QtWidgets.QStyle.SP_FileDialogContentsView))
             btn.setText(tag.tag)
             layout.addWidget(btn)
-            btn.clicked.connect(partial(self.filter_with_tag, tag.tag))
+            btn.clicked.connect(partial(self.search_tag_insert, tag.tag))
 
-    def get_tag_from_item(self, item: QtWidgets.QTreeWidgetItem):
+    def tag_tree_get_from_item(self, item: QtWidgets.QTreeWidgetItem):
         tag = []
         while item:
             tag.append(item.text(0))
             item = item.parent()
         return '/'.join(reversed(tag))
 
-    def pin_tag(self, tag: str):
+    def pin_tag_pin(self, tag: str):
         setting.conn.append_pin_tag(tag)
-        self.refresh_pin_tag()
+        self.pin_tag_refresh()
 
-    def unpin_tag(self, tag: str):
+    def pin_tag_unpin(self, tag: str):
         setting.conn.remove_pin_tag(tag)
-        self.refresh_pin_tag()
+        self.pin_tag_refresh()
 
-    def tagContextMenuEvent(self, e: QtGui.QContextMenuEvent) -> None:
+    def tag_tree_ContextMenuEvent(self, e: QtGui.QContextMenuEvent) -> None:
         root_self = self
         self = self.treeWidget
         item = self.itemAt(e.pos())
@@ -252,23 +252,23 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             return
         menu = QtWidgets.QMenu(self)
 
-        tag = root_self.get_tag_from_item(item)
+        tag = root_self.tag_tree_get_from_item(item)
         menu.addAction('以标签筛选').triggered.connect(
-            partial(root_self.filter_with_tag, tag))
+            partial(root_self.search_tag_insert, tag))
         if not setting.conn.exist_pin_tag(tag):
             menu.addAction('钉住').triggered.connect(
-                partial(root_self.pin_tag, tag))
+                partial(root_self.pin_tag_pin, tag))
         else:
             menu.addAction('取消钉住').triggered.connect(
-                partial(root_self.unpin_tag, tag))
+                partial(root_self.pin_tag_unpin, tag))
         menu.popup(e.globalPos())
 
-    def remove_tag(self, item: QtWidgets.QListWidgetItem):
+    def search_tag_remove(self, item: QtWidgets.QListWidgetItem):
         self.tagListWidget.takeItem(
             self.tagListWidget.indexFromItem(item).row())
         self.search()
 
-    def tagListRightClicked(self, e: QtGui.QContextMenuEvent):
+    def search_tag_RightClicked(self, e: QtGui.QContextMenuEvent):
         item = self.tagListWidget.itemAt(e.pos())
         if not item:
             e.ignore()
@@ -282,26 +282,27 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         row = self.tagListWidget.indexFromItem(item).row()
         self.tagListWidget.takeItem(row)
         if tag:
-            self.filter_with_tag(tag, row)
+            self.search_tag_insert(tag, row)
         else:
             self.search()
 
-    def clear_search(self):
+    def search_clear_all(self):
         self.searchLineEdit.clear()
         self.tagListWidget.clear()
         self.search()
 
-    def add_file(self, handler_name: str):
+    def file_table_create_file(self, handler_name: str):
         file = path_handler_types[handler_name].create_file(handler_name)
+        file.tags = self.search_tag_get()
         setting.conn.insert_file(file)
-        self.table.files.insert(0, file)
-        self.table.showFiles()
+        self.files.insert(0, file)
+        self.file_table_show_files()
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         setting.conn.close_db()
         return super().closeEvent(event)
 
-    def showFiles(self, results: List[File] = None):
+    def file_table_show_files(self, results: List[File] = None):
         table = self.filesTableWidget
         table.clearContents()
         table.setRowCount(0)
@@ -311,9 +312,9 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             results = self.files
         table.setRowCount(len(results))
         for row, file in enumerate(results):
-            self.showat(row, file)
+            self.file_table_show_file_at(row, file)
 
-    def showat(self, row: int, f: File):
+    def file_table_show_file_at(self, row: int, f: File):
         icon = f.handler.get_icon()
         if setting.config.hide_search_tag_in_result:
             tags = []
@@ -343,7 +344,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         for i, col in enumerate(cols, 1):
             table.setItem(row, i, QtWidgets.QTableWidgetItem(col))
 
-    def filesDragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
+    def file_table_DragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:
         data = event.mimeData()
         text = data.text().splitlines()
         if text:
@@ -351,7 +352,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                 if handler.mime_acceptable(text[0]):
                     event.accept()
 
-    def filesDragMoveEvent(self, e: QtGui.QDragMoveEvent) -> None:
+    def file_table_DragMoveEvent(self, e: QtGui.QDragMoveEvent) -> None:
         table = self.filesTableWidget
         if e.pos().y() < table.height() / 2:
             if e.pos().x() < table.width() / 2:
@@ -361,18 +362,21 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             e.setDropAction(QtCore.Qt.DropAction.LinkAction)
 
-    def filesDropEvent(self, e: QtGui.QDropEvent) -> None:
-        self.filesDragMoveEvent(e)
+    def file_table_DropEvent(self, e: QtGui.QDropEvent) -> None:
+        self.file_table_DragMoveEvent(e)
 
         action = e.dropAction()
         conn = setting.conn
         files = []
+        current_tags = self.search_tag_get()
         with conn.connect():
             for file in e.mimeData().text().splitlines():
                 for typ, handler in path_handler_types.items():
                     if not handler.mime_acceptable(file):
                         continue
                     f = handler.create_file_from_mime(file)
+                    f.tags = current_tags.copy()
+
                     match action:
                         case QtCore.Qt.DropAction.MoveAction:
                             f.handler.move_to()
@@ -383,57 +387,58 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                     break
 
         files.extend(self.files)
-        self.showFiles(files)
+        self.file_table_show_files(files)
 
         e.ignore()
 
-    def filesContextMenuEvent(self, e: QtGui.QContextMenuEvent) -> None:
+    def file_table_ContextMenuEvent(self, e: QtGui.QContextMenuEvent) -> None:
         table = self.filesTableWidget
         item = table.itemAt(e.pos())
         if not item:
             e.ignore()
             return
         menu = QtWidgets.QMenu(table)
-        menu.addAction("打开").triggered.connect(partial(self.open_file, item))
-        menu.addAction('编辑').triggered.connect(partial(self.edit_file, item))
+        menu.addAction("打开").triggered.connect(partial(self.file_table_file_open, item))
+        menu.addAction('编辑').triggered.connect(partial(self.file_table_file_edit, item))
         menu.addAction("创建副本").triggered.connect(
-            partial(self.duplicate_file, item))
+            partial(self.file_table_file_duplicate, item))
         menu.addAction('打开文件夹').triggered.connect(
-            partial(self.file_path, item))
+            partial(self.file_table_file_path_open, item))
         menu.popup(e.globalPos())
 
-    def get_file_by_index(self, ind: int, visit: bool = True) -> File:
+    def file_table_get_file_by_index(self, ind: int, visit: bool = True) -> File:
         f = self.files[ind]
         if visit:
             setting.conn.visit(f.id)
         return f
 
-    def duplicate_file(self, item: QtWidgets.QTableWidgetItem):
-        f = copy(self.get_file_by_index(item.row(), False))
+    def file_table_file_duplicate(self, item: QtWidgets.QTableWidgetItem):
+        f = copy(self.file_table_get_file_by_index(item.row(), False))
         setting.conn.insert_file(f)
         self.files.insert(0, f)
         self.filesTableWidget.insertRow(0)
-        self.showat(0, f)
+        self.file_table_show_file_at(0, f)
 
-    def open_file(self, item: QtWidgets.QTableWidgetItem):
-        self.get_file_by_index(item.row()).handler.open()
+    def file_table_file_open(self, item: QtWidgets.QTableWidgetItem):
+        self.file_table_get_file_by_index(item.row()).handler.open()
 
-    def edit_file(self, item: QtWidgets.QTableWidgetItem):
-        f = self.get_file_by_index(item.row())
-        f.handler.edit(partial(self.reshowat, f.id, item.row()))
+    def file_table_file_edit(self, item: QtWidgets.QTableWidgetItem):
+        f = self.file_table_get_file_by_index(item.row())
+        f.handler.edit(partial(self.file_table_show_file_from_db, f.id, item.row()))
 
-    def reshowat(self, file_id, row: int):
+    def file_table_show_file_from_db(self, file_id, row: int):
         conn = setting.conn
         f = conn.fetch_files(
             "SELECT * FROM files WHERE id = ? ", (file_id,))[0]
         self.files[row] = f
-        self.showat(row, f)
+        self.file_table_show_file_at(row, f)
 
-    def file_path(self, item: QtWidgets.QTableWidgetItem):
-        self.get_file_by_index(item.row()).handler.open_path()
+    def file_table_file_path_open(self, item: QtWidgets.QTableWidgetItem):
+        self.file_table_get_file_by_index(item.row()).handler.open_path()
 
-    def del_file(self):
-        rows = sorted({item.row() for item in self.filesTableWidget.selectedItems()})
+    def file_table_file_del(self):
+        rows = sorted({item.row()
+                      for item in self.filesTableWidget.selectedItems()})
         ids = []
         names = []
         conn = setting.conn
@@ -446,10 +451,11 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                 try:
                     with conn.connect():
                         for i in reversed(rows):
-                            f = self.files.pop(i)
+                            f = self.files[i]
                             f.handler.remove()
                             conn.delete_file([f.id])
+                            self.files.pop(i)
                 except:
                     raise
                 finally:
-                    self.showFiles()
+                    self.file_table_show_files()

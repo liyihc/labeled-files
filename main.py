@@ -10,7 +10,7 @@ if __name__ == "__main__":
         app = QtWidgets.QApplication([])
         win = Window()
         win.show()
-        win.init_config()
+        win.config_init()
         win.search()
         import sys
         sys.exit(app.exec())

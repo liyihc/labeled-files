@@ -134,7 +134,10 @@ class Handler(BasePathHandler):
         if not Path(self.file.path).is_absolute():
             p = self.get_absolute_path()
             if p.exists():
-                p.unlink()
+                if p.is_dir():
+                    shutil.rmtree(p)
+                else:
+                    p.unlink()
 
 def open_file(path:Path, env: dict):
     import os
