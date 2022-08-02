@@ -36,6 +36,7 @@ sys.excepthook = except_hook
 # - 文件列表中，标签显示可视化，即名字+标签
 # - 为减少冲突，将访问与真正的文件区分开，根据主机ID区分即可
 # - 文件类型应当支持保存浏览器网页（加一个插件）
+# - tag tree排序时，使用文件的最近访问时间即可！我真聪明
 
 # FUTURE
 # - 支持安装
@@ -337,10 +338,12 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         table = self.filesTableWidget
         table.setItem(row, 0, item)
         if setting.config.file_name_regex and f.name.startswith("r|"):
-            ret = re.search(
-                f.name.removeprefix( 'r|'),
-                pathlib.Path(f.path).name)
-            name = ret.group() if ret else ""
+            path = pathlib.Path(f.path)
+            ret = re.search(f.name.removeprefix('r|'), path.name)
+            if ret:
+                name = ret.group()
+            else:
+                name = f"MISS FINDING {f.name} in {path.name}"
         else:
             name = f.name
         cols = [
@@ -423,7 +426,26 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         return f
 
     def file_table_file_duplicate(self, item: QtWidgets.QTableWidgetItem):
-        f = copy(self.file_table_get_file_by_index(item.row(), False))
+        origin_f = self.file_table_get_file_by_index(item.row(), False)
+        custom = False
+        if origin_f.handler.support_custom_duplicate:
+            msg = QtWidgets.QMessageBox()
+            msg.setText("如何创建副本？")
+            msg.addButton(msg.StandardButton.Cancel)
+            ref_btn = msg.addButton("创建引用副本", msg.ButtonRole.YesRole)
+            cus_btn = msg.addButton("创建自定义副本", msg.ButtonRole.NoRole)
+            msg.setDefaultButton(cus_btn)
+            if msg.exec() == msg.StandardButton.Cancel:
+                return
+            click_btn = msg.clickedButton()
+            if click_btn == cus_btn:
+                custom = True
+        if custom:
+            f = origin_f.handler.custom_deplicate()
+        else:
+            f = copy(origin_f)
+        if f is None:
+            return
         setting.conn.insert_file(f)
         self.files.insert(0, f)
         self.filesTableWidget.insertRow(0)

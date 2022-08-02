@@ -35,6 +35,7 @@ class HandlerDescriptor:
 
 
 class BasePathHandler(abc.ABC):
+    support_custom_duplicate = False
     def __init__(self, file: File) -> None:
         self.file = file
         self.win = None
@@ -138,3 +139,6 @@ class BasePathHandler(abc.ABC):
             pixmap.loadFromData(base64.b64decode(self.file.icon))
             return pixmap
         return self.icon_to_pixmap(self.get_default_icon())
+
+    def custom_deplicate(self) -> File:
+        pass

@@ -1,9 +1,11 @@
+import copy
 from datetime import datetime
 from multiprocessing import Process
 import shutil
 import subprocess
 import random
 from pathlib import Path
+from typing import is_typeddict
 from PySide6.QtCore import QFileInfo, QByteArray, QBuffer, QIODevice
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFileIconProvider, QMessageBox, QInputDialog
@@ -21,6 +23,8 @@ icon_provider: QFileIconProvider = None
 
 
 class Handler(BasePathHandler):
+    support_custom_duplicate = True
+
     @classmethod
     def init_var(cls):
         global icon_provider
@@ -110,7 +114,8 @@ class Handler(BasePathHandler):
     def open(self):
         p = self.get_absolute_path()
         if p.exists():
-            process = Process(target=open_file, args=(p, setting.get_clean_env()))
+            process = Process(target=open_file, args=(
+                p, setting.get_clean_env()))
             process.start()
             process.join()
         else:
@@ -139,7 +144,33 @@ class Handler(BasePathHandler):
                 else:
                     p.unlink()
 
-def open_file(path:Path, env: dict):
+    def custom_deplicate(self) -> File:
+        path = Path(self.file.path)
+        while True:
+            text, ok = QInputDialog.getText(
+                None,
+                "将在原文件夹相同目录创建新文件",
+                "请为新文件输入名称（实际名称，非显示名称）",
+                text=path.name)
+            if not ok:
+                return
+            if text == path.name:
+                QMessageBox.information(
+                    None,
+                    "请提供新文件名称",
+                    "新文件名称不能与旧文件重复")
+            else:
+                break
+        new_path = path.with_name(text)
+        if path.is_dir():
+            shutil.copytree(path, new_path)
+        else:
+            shutil.copy(path, new_path)
+        f = copy.copy(self.file)
+        f.path = str(new_path)
+        return f
+
+def open_file(path: Path, env: dict):
     import os
 
     os.chdir(path.parent)
