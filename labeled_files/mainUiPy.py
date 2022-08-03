@@ -1,14 +1,15 @@
 from __future__ import annotations
 from copy import copy
 import dataclasses
+from datetime import datetime
 import json
 
 import pathlib
 import re
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from functools import partial
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
@@ -36,7 +37,6 @@ sys.excepthook = except_hook
 # - 文件列表中，标签显示可视化，即名字+标签
 # - 为减少冲突，将访问与真正的文件区分开，根据主机ID区分即可
 # - 文件类型应当支持保存浏览器网页（加一个插件）
-# - tag tree排序时，使用文件的最近访问时间即可！我真聪明
 
 # FUTURE
 # - 支持安装
@@ -77,7 +77,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.delPushButton.clicked.connect(self.file_table_file_del)
 
         self.files: List[File] = []
-        self.tags: List[Tuple[str, int]] = []
+        self.tags: List[Tuple[str, int, datetime]] = []
 
     def config_init(self):
         config_path = pathlib.Path("config.json")
@@ -166,12 +166,15 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                 for row in range(self.tagListWidget.count())]
 
     def tag_tree_show_files(self, files: List[File]):
-        # SELECT label, COUNT(*) FROM file_labels WHERE file_id in file_id_list GROUP BY label ORDER BY label
-        counter = Counter()
+        default_value = (0, datetime(1970, 1, 1))
+        counter: Dict[str, (int, datetime)] = defaultdict(
+            lambda: default_value)
         for f in files:
-            counter.update(f.tags)
-        tags = list(counter.items())
-        tags.sort(key=lambda v: v[0])
+            for tag in tags:
+                cnt, dt = counter[tag]
+                counter[tag] = (cnt + 1, max(f.vtime, dt))
+        tags = [(k, v1, v2) for k, (v1, v2) in counter]
+        tags.sort(key=lambda v: (v[2], v[1]), reverse=True)
         self.tags = tags
 
         self.tag_tree_show()
@@ -179,17 +182,24 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def tag_tree_show(self):
         keyword = self.tagLineEdit.text().lower()
         if keyword:
-            tags = [(tag, count)
-                    for tag, count in self.tags if keyword in tag.lower()]
+            tags = [(tag, count, vtime)
+                    for tag, count, vtime in self.tags if keyword in tag.lower()]
         else:
             tags = self.tags
         build_tree(self.treeWidget, tags)
 
     def tag_tree_show_all(self):
         conn = setting.conn
-        sql = f"SELECT label, COUNT(*) FROM file_labels GROUP BY label ORDER BY label"
+        sql = f"""
+            SELECT fl.label, COUNT(*) c, MAX(fs.vtime) t
+            FROM file_labels fl
+            LEFT JOIN files fs
+            ON fl.file_id == fs.id
+            GROUP BY fl.label 
+            ORDER BY t DESC, c DESC"""
         with conn.connect():
-            self.tags = conn.execute(sql).fetchall()
+            self.tags = [(tag, cnt, datetime.fromisoformat(vtime))
+                         for tag, cnt, vtime in conn.execute(sql).fetchall()]
         self.tag_tree_show()
 
     def tag_tree_item_append(self, item: QtWidgets.QTreeWidgetItem):
@@ -427,7 +437,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             setting.conn.visit(f.id)
         return f
 
-    def file_table_file_filter(self, item:QtWidgets.QTableWidgetItem):
+    def file_table_file_filter(self, item: QtWidgets.QTableWidgetItem):
         f = self.file_table_get_file_by_index(item.row(), False)
         for tag in f.tags:
             self.search_tag_insert(tag)
