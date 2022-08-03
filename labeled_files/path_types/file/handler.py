@@ -144,6 +144,9 @@ class Handler(BasePathHandler):
                 else:
                     p.unlink()
 
+    def actual_name_get(self) -> str:
+        return Path(self.file.path).name
+
     def custom_deplicate(self) -> File:
         path = Path(self.file.path)
         while True:

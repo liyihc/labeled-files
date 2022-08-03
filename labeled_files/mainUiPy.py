@@ -338,12 +338,12 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         table = self.filesTableWidget
         table.setItem(row, 0, item)
         if setting.config.file_name_regex and f.name.startswith("r|"):
-            path = pathlib.Path(f.path)
-            ret = re.search(f.name.removeprefix('r|'), path.name)
+            actual_name = f.handler.actual_name_get()
+            ret = re.search(f.name.removeprefix('r|'), actual_name)
             if ret:
                 name = ret.group()
             else:
-                name = f"MISS FINDING {f.name} in {path.name}"
+                name = f"MISS FINDING {f.name} in {actual_name}"
         else:
             name = f.name
         cols = [

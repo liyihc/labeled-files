@@ -168,3 +168,6 @@ class Handler(BasePathHandler):
 
     def remove(self):
         pass
+
+    def actual_name_get(self) -> str:
+        return self.file.path

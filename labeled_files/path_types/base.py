@@ -4,6 +4,7 @@ import base64
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Type
+import weakref
 from PySide6.QtGui import QIcon, QPixmap, QScreen
 from PySide6.QtCore import QFileInfo, QByteArray, QBuffer, QIODevice
 
@@ -36,8 +37,9 @@ class HandlerDescriptor:
 
 class BasePathHandler(abc.ABC):
     support_custom_duplicate = False
+
     def __init__(self, file: File) -> None:
-        self.file = file
+        self.file: File = weakref.proxy(file)
         self.win = None
 
     @classmethod
@@ -124,6 +126,10 @@ class BasePathHandler(abc.ABC):
 
     @abc.abstractmethod
     def remove(self):
+        pass
+
+    @abc.abstractmethod
+    def actual_name_get(self) -> str:
         pass
 
     def get_icon(self) -> QIcon:

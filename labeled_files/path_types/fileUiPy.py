@@ -15,14 +15,16 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
 
+        handler = file.handler
         self.origin_file = file
         self.idLineEdit.setText(str(file.id))
-        self.nameLineEdit.setText(file.name)
+        self.shownNameLineEdit.setText(file.name)
+        self.actualNameLineEdit.setText(handler.actual_name_get())
         self.dateTimeEdit.setDateTime(file.ctime)
         self.tagLineEdit.setText(
             " ".join(['#' + tag for tag in file.tags]))
         self.icon = file.icon
-        pixmap = file.handler.get_pixmap()
+        pixmap = handler.get_pixmap()
         pixmap.setDevicePixelRatio(self.devicePixelRatio())
         self.iconLabel.setPixmap(pixmap)
 

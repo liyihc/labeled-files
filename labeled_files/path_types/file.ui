@@ -32,50 +32,50 @@
        </widget>
       </item>
       <item row="1" column="0">
-       <widget class="QLabel" name="nameLabel">
+       <widget class="QLabel" name="shownNameLabel">
         <property name="text">
-         <string>名称</string>
+         <string>显示名</string>
         </property>
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QLineEdit" name="nameLineEdit"/>
+       <widget class="QLineEdit" name="shownNameLineEdit"/>
       </item>
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="pathLabel">
         <property name="text">
          <string>路径</string>
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
+      <item row="4" column="0">
        <widget class="QLabel" name="label_3">
         <property name="text">
          <string>时间</string>
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
+      <item row="5" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
          <string>标签</string>
         </property>
        </widget>
       </item>
-      <item row="4" column="1">
+      <item row="5" column="1">
        <widget class="QLineEdit" name="tagLineEdit"/>
       </item>
-      <item row="6" column="0">
+      <item row="7" column="0">
        <widget class="QLabel" name="label_2">
         <property name="text">
          <string>描述</string>
         </property>
        </widget>
       </item>
-      <item row="6" column="1">
+      <item row="7" column="1">
        <widget class="QPlainTextEdit" name="plainTextEdit"/>
       </item>
-      <item row="3" column="1">
+      <item row="4" column="1">
        <widget class="QDateTimeEdit" name="dateTimeEdit">
         <property name="displayFormat">
          <string>yy/MM/dd HH:mm:ss</string>
@@ -85,14 +85,14 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="0">
+      <item row="6" column="0">
        <widget class="QLabel" name="label_4">
         <property name="text">
          <string>图标</string>
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
+      <item row="6" column="1">
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
          <widget class="QLabel" name="iconLabel">
@@ -124,8 +124,22 @@
         </item>
        </layout>
       </item>
-      <item row="2" column="1">
+      <item row="3" column="1">
        <widget class="QWidget" name="widget" native="true"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="actualNameLabel">
+        <property name="text">
+         <string>真实名</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="actualNameLineEdit">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
