@@ -413,6 +413,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             partial(self.file_table_file_open, item))
         menu.addAction('编辑').triggered.connect(
             partial(self.file_table_file_edit, item))
+        menu.addAction("以标签筛选").triggered.connect(
+            partial(self.file_table_file_filter, item))
         menu.addAction("创建副本").triggered.connect(
             partial(self.file_table_file_duplicate, item))
         menu.addAction('打开文件夹').triggered.connect(
@@ -424,6 +426,11 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         if visit:
             setting.conn.visit(f.id)
         return f
+
+    def file_table_file_filter(self, item:QtWidgets.QTableWidgetItem):
+        f = self.file_table_get_file_by_index(item.row(), False)
+        for tag in f.tags:
+            self.search_tag_insert(tag)
 
     def file_table_file_duplicate(self, item: QtWidgets.QTableWidgetItem):
         origin_f = self.file_table_get_file_by_index(item.row(), False)
