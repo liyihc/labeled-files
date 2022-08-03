@@ -170,10 +170,10 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         counter: Dict[str, (int, datetime)] = defaultdict(
             lambda: default_value)
         for f in files:
-            for tag in tags:
+            for tag in f.tags:
                 cnt, dt = counter[tag]
                 counter[tag] = (cnt + 1, max(f.vtime, dt))
-        tags = [(k, v1, v2) for k, (v1, v2) in counter]
+        tags = [(k, v1, v2) for k, (v1, v2) in counter.items()]
         tags.sort(key=lambda v: (v[2], v[1]), reverse=True)
         self.tags = tags
 
