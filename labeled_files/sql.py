@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 import sqlite3
-from typing import Union
+from typing import Iterable, Union
 from PySide6.QtCore import QTimer
 
 from . import updater
@@ -126,6 +126,7 @@ CREATE INDEX IF NOT EXISTS files_vtime
                 f"INSERT INTO files(name, type, path, ctime, vtime, icon, description) VALUES(?,?,?,?,?,?,?)",
                 (f.name, f.type, f.path, str(f.ctime), str(f.vtime), f.icon, f.description))
             f.id = cur.lastrowid
+            self.update_file_tags(f.id, f.tags)
 
     def delete_file(self, file_ids: list[str]):
         if not file_ids:
@@ -140,20 +141,25 @@ CREATE INDEX IF NOT EXISTS files_vtime
             conn.execute(
                 "UPDATE files SET vtime = ? WHERE id = ?", (str(datetime.now()), file_id))
 
+    def update_file_tags(self, file_id: int, tags: Iterable[str]):
+        with self.connect() as conn:
+            tags = set(tag for tag, in conn.execute(
+                "SELECT label FROM file_labels WHERE file_id = ?", (file_id,)))
+            new_tags = set(tags)
+            if tags != new_tags:
+                conn.executemany(
+                    "INSERT INTO file_labels(file_id, label) VALUES(?,?)",
+                    [(file_id, tag) for tag in new_tags - tags])
+                conn.executemany(
+                    "DELETE FROM file_labels WHERE file_id = ? AND label = ?",
+                    [(file_id, tag) for tag in tags - new_tags])
+
+
     def update_file(self, file: File):
         with self.connect() as conn:
             conn.execute(
                 "UPDATE files SET name = ?, path = ?, ctime = ?, icon = ?, description = ? WHERE id = ?", (file.name, file.path, str(file.ctime), file.icon, file.description, file.id))
-            tags = set(tag for tag, in conn.execute(
-                "SELECT label FROM file_labels WHERE file_id = ?", (file.id,)))
-            new_tags = set(file.tags)
-            if tags != new_tags:
-                conn.executemany(
-                    "INSERT INTO file_labels(file_id, label) VALUES(?,?)",
-                    [(file.id, tag) for tag in new_tags - tags])
-                conn.executemany(
-                    "DELETE FROM file_labels WHERE file_id = ? AND label = ?",
-                    [(file.id, tag) for tag in tags - new_tags])
+            self.update_file_tags(file.id, file.tags)
 
     def get_pin_tags(self):
         with self.connect() as conn:
