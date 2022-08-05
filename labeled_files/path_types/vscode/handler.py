@@ -138,19 +138,21 @@ class Handler(BasePathHandler):
     def get_widget_type(self):
         return Widget
 
-    def open_path(self):
+    def get_absolute_path(self) -> Path:
         if self.file.path:
             vp = VscodePath.from_str(self.file.path)
             if vp.protocol == "file":
                 path = vp.path
                 if platform.system() == "Windows":
                     path = Path(path.removeprefix('/'))
-                    path = setting.convert_path(path)
-                    subprocess.Popen(
-                        f'explorer /select,"{path}"')
-                # else:
-                #     path = setting.convert_path(path)
-                #     pass
+                    return setting.convert_path(path)
+        return super().get_absolute_path()
+
+    def open_path(self):
+        path = self.get_absolute_path()
+        if path == Path.home():
+            return
+        subprocess.Popen(f'explorer /select,"{path}"')
 
     def repr(self) -> str:
         p = self.file.path

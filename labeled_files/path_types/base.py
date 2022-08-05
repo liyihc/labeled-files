@@ -3,6 +3,7 @@ import abc
 import base64
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Type
 import weakref
 from PySide6.QtGui import QIcon, QPixmap, QScreen
@@ -149,5 +150,8 @@ class BasePathHandler(abc.ABC):
             return pixmap
         return self.icon_to_pixmap(self.get_default_icon())
 
-    def custom_deplicate(self) -> File:
+    def custom_deplicate(self) -> File | None:
         pass
+
+    def get_absolute_path(self)->Path:
+        return Path.home()
