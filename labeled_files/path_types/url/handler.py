@@ -32,7 +32,7 @@ class Handler(BasePathHandler):
         else:
             title = mime_path.removeprefix("http://").removeprefix("https://")
         pixmap = get_icon_from_url(mime_path, soup)
-        if pixmap.width() > 20:
+        if pixmap is not None and pixmap.width() > 20:
             pixmap = pixmap.scaled(20, 20)
         return File(
             None,
