@@ -37,6 +37,7 @@ class HandlerDescriptor:
 
 class BasePathHandler(abc.ABC):
     support_custom_duplicate = False
+    support_dynamic_icon = True
 
     def __init__(self, file: File) -> None:
         self.file: File = weakref.proxy(file)
@@ -61,7 +62,9 @@ class BasePathHandler(abc.ABC):
 
     @staticmethod
     def icon_to_b64(icon: QIcon):
-        return BasePathHandler.pixmap_to_b64(BasePathHandler.icon_to_pixmap(icon))
+        if icon:
+            return BasePathHandler.pixmap_to_b64(BasePathHandler.icon_to_pixmap(icon))
+        return b""
 
     @classmethod
     @abc.abstractmethod

@@ -12,3 +12,7 @@ def init_handlers():
     from . import vscode
     if vscode.Handler.init_var():
         path_handler_types["vscode"] = vscode.Handler
+
+    from . import url
+    if url.Handler.init_var():
+        path_handler_types["url"] = url.Handler

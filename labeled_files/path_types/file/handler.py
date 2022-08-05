@@ -44,9 +44,9 @@ class Handler(BasePathHandler):
             stat.st_ctime), datetime.now(), "", "")
         if typ == "file" and p.suffix.lower() in need_icon_suffixes:
             icon = f.handler.get_default_icon()
-            f.icon = f.handler.icon_to_b64(icon)
+            f.icon = cls.icon_to_b64(icon)
         else:
-            # generate icon for folder or file.type dynamicly
+            # will generate icon for folder or file.type dynamicly
             pass
         return f
 

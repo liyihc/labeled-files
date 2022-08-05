@@ -42,7 +42,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def confirm(self):
         self.sub_widget.confirm_path()
         file = copy.deepcopy(self.origin_file)
-        file.name = self.nameLineEdit.text()
+        file.name = self.shownNameLineEdit.text()
         file.ctime = self.dateTimeEdit.dateTime().toPython()
         file.tags = [tag for part in self.tagLineEdit.text(
         ).split() if (tag := part.strip().strip('#'))]
@@ -57,11 +57,15 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.close()
 
     def clear_image(self):
-        self.icon = ""
+        handler = self.origin_file.handler
         pixmap = self.origin_file.handler.icon_to_pixmap(
             self.origin_file.handler.get_default_icon())
         pixmap.setDevicePixelRatio(self.devicePixelRatio())
         self.iconLabel.setPixmap(pixmap)
+        if handler.support_dynamic_icon:
+            self.icon = b""
+        else:
+            self.icon = handler.pixmap_to_b64(pixmap)
 
     def icon_choose(self):
         f, typ = QtWidgets.QFileDialog.getOpenFileName(self, "choose an icon", str(
