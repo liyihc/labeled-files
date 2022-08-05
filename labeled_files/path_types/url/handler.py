@@ -10,6 +10,8 @@ from .urlUiPy import Widget
 
 
 class Handler(BasePathHandler):
+    support_dynamic_icon = False
+
     @classmethod
     def init_var(cls) -> bool:
         return True

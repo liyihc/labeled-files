@@ -136,19 +136,21 @@ class BasePathHandler(abc.ABC):
     def actual_name_get(self) -> str:
         pass
 
-    def get_icon(self) -> QIcon:
+    def get_icon(self) -> QIcon | None:
         if self.file.icon:
             pixmap = QPixmap()
             pixmap.loadFromData(base64.b64decode(self.file.icon))
             return QIcon(pixmap)
-        return self.get_default_icon()
+        if self.support_dynamic_icon:
+            return self.get_default_icon()
 
-    def get_pixmap(self) -> QPixmap:
+    def get_pixmap(self) -> QPixmap | None:
         if self.file.icon:
             pixmap = QPixmap()
             pixmap.loadFromData(base64.b64decode(self.file.icon))
             return pixmap
-        return self.icon_to_pixmap(self.get_default_icon())
+        if self.support_dynamic_icon:
+            return self.icon_to_pixmap(self.get_default_icon())
 
     def custom_deplicate(self) -> File | None:
         pass

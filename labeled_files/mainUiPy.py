@@ -35,7 +35,16 @@ sys.excepthook = except_hook
 # TODO:
 # - 支持多语言
 # - 文件列表中，标签显示可视化，即名字+标签
-# - 为减少冲突，将访问与真正的文件区分开，根据主机ID区分即可
+# - 为减少冲突，将访问与真正的文件区分开
+#   - 读的时候读所有文件
+#   - 写的时候只写一个log就完事了
+#   ```python
+#   import platform
+#   platform.node()
+#   ...
+#   
+#   config.override_platform_name = ""
+#   ```
 
 # FUTURE
 # - 支持安装
@@ -342,8 +351,11 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                     tags.append(tag)
         else:
             tags = f.tags
-        item = QtWidgets.QTableWidgetItem(
-            icon, ' '.join('#' + tag for tag in tags))
+        text = ' '.join('#' + tag for tag in tags)
+        if icon is None:
+            item = QtWidgets.QTableWidgetItem(text)
+        else:
+            item = QtWidgets.QTableWidgetItem(icon, text)
         table = self.filesTableWidget
         table.setItem(row, 0, item)
         if setting.config.file_name_regex and f.name.startswith("r|"):

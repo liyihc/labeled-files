@@ -25,8 +25,9 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             " ".join(['#' + tag for tag in file.tags]))
         self.icon = file.icon
         pixmap = handler.get_pixmap()
-        pixmap.setDevicePixelRatio(self.devicePixelRatio())
-        self.iconLabel.setPixmap(pixmap)
+        if pixmap is not None:
+            pixmap.setDevicePixelRatio(self.devicePixelRatio())
+            self.iconLabel.setPixmap(pixmap)
 
         self.plainTextEdit.setPlainText(file.description)
 
