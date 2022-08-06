@@ -208,7 +208,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                     shown_tag.time = max(shown_tag.time, f.vtime)
                 else:
                     tags[tag] = TreeTag(tag, 1, f.vtime)
-        self.tags = sorted(tags.items(), key=lambda tag: (
+        self.tags = sorted(tags.values(), key=lambda tag: (
             tag.time, tag.count), reverse=True)
 
         self.tag_tree_show()
