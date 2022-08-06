@@ -6,6 +6,13 @@ from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QHeaderView
 
 
 @dataclass
+class TreeTag:
+    tag: str
+    count: int = 0
+    time: datetime = datetime(1970, 1, 1)
+
+
+@dataclass
 class Node:
     count: int = 0
     vtime: datetime = datetime(1970, 1, 1)
@@ -45,10 +52,10 @@ class Node:
             node.build_tree(item, False)
 
 
-def build_tree(treeWidget: QTreeWidget, labels: list[tuple[str, int]]):
+def build_tree(treeWidget: QTreeWidget, tags: list[TreeTag]):
     root = Node()
-    for label, count, vtime in labels:
-        root.build_node(label, count, vtime)
+    for tag in tags:
+        root.build_node(tag.tag, tag.count, tag.time)
 
     treeWidget.clear()
     treeWidget.header().setSectionResizeMode(

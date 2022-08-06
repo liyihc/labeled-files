@@ -14,10 +14,9 @@ from typing import Dict, List, Tuple
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from .mainUi import Ui_MainWindow
-from .path_types import init_handlers, path_handler_types
+from .path_types import init_handlers, path_handler_types, File
 from .setting import VERSION, Config, setting, logv
-from .sql import File
-from .tree import build_tree
+from .tree import build_tree, TreeTag
 from .utils import get_shown_timedelta
 from .flow_layout import FlowLayout
 
@@ -42,12 +41,15 @@ sys.excepthook = except_hook
 #   import platform
 #   platform.node()
 #   ...
-#   
+#
 #   config.override_platform_name = ""
 #   ```
 
 # FUTURE
 # - 支持安装
+
+min_dt = datetime(1970, 1, 1)
+
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self) -> None:
@@ -85,7 +87,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.delPushButton.clicked.connect(self.file_table_file_del)
 
         self.files: List[File] = []
-        self.tags: List[Tuple[str, int, datetime]] = []
+        self.tags: List[TreeTag] = []
 
     def config_init(self):
         config_path = pathlib.Path("config.json")
@@ -132,15 +134,29 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
         logv("SEARCH", f"keyword='{keyword}' tag='{str(tags)}'")
 
+        id_times: Dict[int, datetime] = {}
+        file_ids: List[int] = []
         conn = setting.conn
         with conn.connect():
             match keyword, tags:
                 case "", []:
-                    file_ids = [f for f, in conn.execute(
-                        "SELECT id FROM files ORDER BY vtime DESC LIMIT 50")]
+                    for file_id, vtime in conn.execute(
+                            "SELECT id, vtime FROM files ORDER BY vtime DESC LIMIT 50"):
+                        id_times[file_id] = datetime.fromisoformat(vtime)
+                    for conn_r in setting.visit_conns_r:
+                        with conn_r.connect():
+                            for file_id, vtime in conn_r.get_files_by_time(50):
+                                id_times[file_id] = max(
+                                    id_times.get(file_id, min_dt), vtime)
+                    id_times_list = list(id_times.items())
+                    id_times_list.sort(key=lambda v: v[1], reverse=True)
+                    if len(id_times_list) > 50:
+                        id_times_list = id_times_list[:50]
+                    id_times = dict(id_times_list)
+                    file_ids = list(id_times)
                 case keyword, []:
                     file_ids = [f for f, in conn.execute(
-                        f'SELECT id FROM files WHERE name like "%{keyword}%" ORDER BY vtime DESC')]
+                        f'SELECT id FROM files WHERE name like "%{keyword}%"')]
                 case keyword, tags:
                     tag = tags[0]
                     file_ids = {v for v, in conn.execute(
@@ -154,11 +170,20 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                     if file_ids and keyword:
                         file_ids = ','.join(str(f) for f in file_ids)
                         file_ids = [f for f, in conn.execute(
-                            f'SELECT id FROM files WHERE name like "%{keyword}%" AND id in ({file_ids}) ORDER BY vtime DESC')]
+                            f'SELECT id FROM files WHERE name like "%{keyword}%" AND id in ({file_ids})')]
             if file_ids:
                 file_ids = ','.join(str(f) for f in file_ids)
                 files = conn.fetch_files(
-                    f"SELECT * FROM files WHERE id in ({file_ids}) ORDER BY vtime DESC")
+                    f"SELECT * FROM files WHERE id in ({file_ids})")
+                if not id_times:
+                    for conn_r in setting.visit_conns_r:
+                        with conn_r.connect():
+                            for f in files:
+                                id_times[f.id] = max(
+                                    id_times.get(f.id, min_dt), conn_r.get_file_time(f.id))
+                for f in files:
+                    f.vtime = id_times.get(f.id, f.vtime)
+                files.sort(key=lambda f: f.vtime, reverse=True)
             else:
                 files = []
             setting.searched_tags = tags
@@ -174,24 +199,24 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                 for row in range(self.tagListWidget.count())]
 
     def tag_tree_show_files(self, files: List[File]):
-        default_value = (0, datetime(1970, 1, 1))
-        counter: Dict[str, (int, datetime)] = defaultdict(
-            lambda: default_value)
+        tags: Dict[str, TreeTag] = {}
         for f in files:
             for tag in f.tags:
-                cnt, dt = counter[tag]
-                counter[tag] = (cnt + 1, max(f.vtime, dt))
-        tags = [(k, v1, v2) for k, (v1, v2) in counter.items()]
-        tags.sort(key=lambda v: (v[2], v[1]), reverse=True)
-        self.tags = tags
+                if tag in tags:
+                    shown_tag = tags[tag]
+                    shown_tag.count += 1
+                    shown_tag.time = max(shown_tag.time, f.vtime)
+                else:
+                    tags[tag] = TreeTag(tag, 1, f.vtime)
+        self.tags = sorted(tags.items(), key=lambda tag: (
+            tag.time, tag.count), reverse=True)
 
         self.tag_tree_show()
 
     def tag_tree_show(self):
         keyword = self.tagLineEdit.text().lower()
         if keyword:
-            tags = [(tag, count, vtime)
-                    for tag, count, vtime in self.tags if keyword in tag.lower()]
+            tags = [tag for tag in self.tags if keyword in tag.tag.lower()]
         else:
             tags = self.tags
         build_tree(self.treeWidget, tags)
@@ -199,15 +224,17 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def tag_tree_show_all(self):
         conn = setting.conn
         sql = f"""
-            SELECT fl.label, COUNT(*) c, MAX(fs.vtime) t
-            FROM file_labels fl
-            LEFT JOIN files fs
-            ON fl.file_id == fs.id
-            GROUP BY fl.label 
-            ORDER BY t DESC, c DESC"""
+            SELECT label, COUNT(*)
+            FROM file_labels
+            GROUP BY label"""
         with conn.connect():
-            self.tags = [(tag, cnt, datetime.fromisoformat(vtime))
-                         for tag, cnt, vtime in conn.execute(sql).fetchall()]
+            tags = [TreeTag(tag, cnt)
+                    for tag, cnt in conn.execute(sql).fetchall()]
+            for vconn in setting.visit_conns_r:
+                with vconn.connect():
+                    for tag in tags:
+                        tag.time = max(tag.time, vconn.get_tag_time(tag.tag))
+            self.tags = tags
         self.tag_tree_show()
 
     def tag_tree_item_append(self, item: QtWidgets.QTreeWidgetItem):
@@ -319,7 +346,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.file_table_show_files()
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
-        setting.conn.close_db()
+        from .sql import on_close
+        on_close()
         return super().closeEvent(event)
 
     def file_table_show_files(self, results: List[File] = None):
@@ -445,7 +473,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     def file_table_get_file_by_index(self, ind: int, visit: bool = True) -> File:
         f = self.files[ind]
         if visit:
-            setting.conn.visit(f.id)
+            setting.visit_conn_w.visit_file(f.id, f.tags)
         return f
 
     def file_table_file_filter(self, item: QtWidgets.QTableWidgetItem):

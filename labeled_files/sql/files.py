@@ -1,13 +1,13 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 import sqlite3
 from typing import Iterable, Union
-from PySide6.QtCore import QTimer
+from inspect import cleandoc
 
-from . import updater
-from .path_types import File
+from . import files_updater
+from ..path_types import File
+from .base import BaseConnection
 
 file_types = {}
 
@@ -19,79 +19,44 @@ class PinTag:
     rank: int = 100
 
 
-class Connection:
-    def __init__(self, path: Path):
-        self.path = path
-        self._conn: Union[sqlite3.Connection, None] = None
-        self._timer = QTimer()
-        self._timer.timeout.connect(self.close_db)
-        if not path.exists():
-            self.init_db()
-        else:
-            with self.connect() as conn:
-                updater.update(conn)
-
-    @contextmanager
-    def connect(self):
-        if self._conn:
-            yield self._conn
-            if self._timer.isActive():
-                self._timer.stop()
-                self._timer.start(10 * 1000)
-        else:
-            conn = self._conn = sqlite3.connect(self.path)
-            print("db connect")
-            with conn:
-                yield conn
-            self._timer.start(10 * 1000)
-
-    def close_db(self):
-        if self._conn:
-            print("db close")
-            self._conn.commit()
-            self._conn.close()
-            self._conn = None
-
-    def __del__(self):
-        self.close_db()
-
+class Connection(BaseConnection):
     def init_db(self):
-        from . import setting
+        from .. import setting
         with self.connect() as conn:
-            conn.executescript(f"""
-CREATE TABLE IF NOT EXISTS file_labels(
-    label TEXT,
-    file_id INTEGER,
-    PRIMARY KEY(file_id, label));
-CREATE INDEX IF NOT EXISTS file_labels_label
-    ON file_labels(label, file_id);
-CREATE TABLE IF NOT EXISTS files(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    type TEXT,
-    path TEXT,
-    ctime DATETIME,
-    vtime DATETIME,
-    icon TEXT,
-    description TEXT);
-CREATE TABLE IF NOT EXISTS pin_label(
-    label TEXT PRIMARY KEY,
-    icon TEXT,
-    rank INTEGER);
-CREATE TABLE IF NOT EXISTS infos(
-    key VARCHAR(20) PRIMARY KEY,
-    value TEXT);
-INSERT INTO infos(key, value) VALUES("version", "{setting.VERSION}");
-CREATE INDEX IF NOT EXISTS files_name
-    ON files(name);
-CREATE INDEX IF NOT EXISTS files_ctime
-    ON files(ctime);
-CREATE INDEX IF NOT EXISTS files_vtime
-    ON files(vtime); """)
+            conn.executescript(cleandoc(f"""
+                CREATE TABLE IF NOT EXISTS file_labels(
+                    label TEXT,
+                    file_id INTEGER,
+                    PRIMARY KEY(file_id, label));
+                CREATE INDEX IF NOT EXISTS file_labels_label
+                    ON file_labels(label, file_id);
+                CREATE TABLE IF NOT EXISTS files(
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT,
+                    type TEXT,
+                    path TEXT,
+                    ctime DATETIME,
+                    vtime DATETIME,
+                    icon TEXT,
+                    description TEXT);
+                CREATE TABLE IF NOT EXISTS pin_label(
+                    label TEXT PRIMARY KEY,
+                    icon TEXT,
+                    rank INTEGER);
+                CREATE TABLE IF NOT EXISTS infos(
+                    key VARCHAR(20) PRIMARY KEY,
+                    value TEXT);
+                INSERT INTO infos(key, value) VALUES("version", "{setting.VERSION}");
+                CREATE INDEX IF NOT EXISTS files_name
+                    ON files(name);
+                CREATE INDEX IF NOT EXISTS files_ctime
+                    ON files(ctime);
+                CREATE INDEX IF NOT EXISTS files_vtime
+                    ON files(vtime); """))
 
-    def execute(self, *args, **kwds):
-        assert self._conn is not None, "execute should be called in a context manager"
-        return self._conn.execute(*args, **kwds)
+    def update_db(self):
+        with self.connect() as conn:
+            files_updater.update(conn)
 
     def fetch_files(self, *args, **kwds) -> list[File]:
         """
@@ -136,16 +101,11 @@ CREATE INDEX IF NOT EXISTS files_vtime
             conn.execute(f"DELETE FROM files WHERE id in ({ids})")
             conn.execute(f"DELETE FROM file_labels WHERE file_id in ({ids})")
 
-    def visit(self, file_id):
-        with self.connect() as conn:
-            conn.execute(
-                "UPDATE files SET vtime = ? WHERE id = ?", (str(datetime.now()), file_id))
-
-    def update_file_tags(self, file_id: int, tags: Iterable[str]):
+    def update_file_tags(self, file_id: int, new_tags: Iterable[str]):
         with self.connect() as conn:
             tags = set(tag for tag, in conn.execute(
                 "SELECT label FROM file_labels WHERE file_id = ?", (file_id,)))
-            new_tags = set(tags)
+            new_tags = set(new_tags)
             if tags != new_tags:
                 conn.executemany(
                     "INSERT INTO file_labels(file_id, label) VALUES(?,?)",
@@ -153,7 +113,6 @@ CREATE INDEX IF NOT EXISTS files_vtime
                 conn.executemany(
                     "DELETE FROM file_labels WHERE file_id = ? AND label = ?",
                     [(file_id, tag) for tag in tags - new_tags])
-
 
     def update_file(self, file: File):
         with self.connect() as conn:
