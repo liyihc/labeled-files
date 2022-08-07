@@ -34,16 +34,6 @@ sys.excepthook = except_hook
 # TODO:
 # - 支持多语言
 # - 文件列表中，标签显示可视化，即名字+标签
-# - 为减少冲突，将访问与真正的文件区分开
-#   - 读的时候读所有文件
-#   - 写的时候只写一个log就完事了
-#   ```python
-#   import platform
-#   platform.node()
-#   ...
-#
-#   config.override_platform_name = ""
-#   ```
 
 # FUTURE
 # - 支持安装
@@ -341,6 +331,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def file_table_create_file(self, handler_name: str):
         file = path_handler_types[handler_name].create_file(handler_name)
+        if file is None:
+            return
         file.tags = self.search_tag_get()
         setting.conn.insert_file(file)
         self.files.insert(0, file)
@@ -436,6 +428,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                     if not handler.mime_acceptable(file):
                         continue
                     f = handler.create_file_from_mime(file)
+                    if f is None:
+                        continue
                     f.tags = current_tags.copy()
 
                     match action:

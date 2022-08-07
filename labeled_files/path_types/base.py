@@ -49,8 +49,10 @@ class BasePathHandler(abc.ABC):
         pass
 
     @staticmethod
-    def icon_to_pixmap(icon: QIcon):
-        return icon.pixmap(20, 20)
+    def icon_to_pixmap(icon: QIcon | None):
+        if icon is None:
+            return None
+        return icon.pixmap(32, 32)
 
     @staticmethod
     def pixmap_to_b64(pixmap: QPixmap):
@@ -155,5 +157,5 @@ class BasePathHandler(abc.ABC):
     def custom_deplicate(self) -> File | None:
         pass
 
-    def get_absolute_path(self)->Path:
+    def get_absolute_path(self) -> Path:
         return Path.home()

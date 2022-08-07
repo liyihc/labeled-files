@@ -12,7 +12,6 @@ from labeled_files.setting import setting
 
 from ..base import BasePathHandler, File
 import subprocess
-from .vscodeUiPy import Widget
 
 vscode_instance_path: Path = None
 folder_pixmap: QtGui.QPixmap = None
@@ -77,7 +76,7 @@ class Handler(BasePathHandler):
                 icon = icon_provider.icon(
                     QtCore.QFileInfo(vscode_instance_path))
                 folder_icon = remote_icon = icon
-                folder_pixmap = remote_pixmap = icon.pixmap(20, 20)
+                folder_pixmap = remote_pixmap = icon.pixmap(32, 32)
                 return True
         return False
 
@@ -136,6 +135,7 @@ class Handler(BasePathHandler):
                     )
 
     def get_widget_type(self):
+        from .vscodeUiPy import Widget
         return Widget
 
     def get_absolute_path(self) -> Path:

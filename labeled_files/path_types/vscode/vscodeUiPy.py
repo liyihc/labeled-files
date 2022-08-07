@@ -1,5 +1,3 @@
-from urllib.parse import quote, unquote
-
 from ..fileUiPy import BaseWidget
 from .vscodeUi import Ui_Form
 from . import handler

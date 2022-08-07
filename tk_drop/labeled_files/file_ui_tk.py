@@ -91,9 +91,9 @@ class Window:
         w = image.width
         h = image.height
         if w > h:
-            w, h = 20, h // w * 20
+            w, h = 32, h // w * 32
         else:
-            w, h = w // h * 20, 20
+            w, h = w // h * 32, 32
         image = image.resize((w, h))
         buf = io.BytesIO()
         image.save(buf, 'PNG')

@@ -13,7 +13,6 @@ from labeled_files.setting import setting
 
 from ..base import BasePathHandler, File
 
-from .fileUiPy import Widget
 
 need_icon_suffixes = {".exe", "", ".lnk"}
 EXECUTABLE = {".exe"}
@@ -122,6 +121,7 @@ class Handler(BasePathHandler):
             QMessageBox.information(None, "文件不存在", str(p))  # or raise error
 
     def get_widget_type(self):
+        from .fileUiPy import Widget
         return Widget
 
     def open_path(self):

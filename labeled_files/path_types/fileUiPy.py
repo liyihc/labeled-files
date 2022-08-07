@@ -62,6 +62,8 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         handler = self.origin_file.handler
         pixmap = self.origin_file.handler.icon_to_pixmap(
             self.origin_file.handler.get_default_icon())
+        if pixmap is None:
+            return
         pixmap.setDevicePixelRatio(self.devicePixelRatio())
         self.iconLabel.setPixmap(pixmap)
         if handler.support_dynamic_icon:
@@ -75,7 +77,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         if not f:
             return
         pixmap = QtWidgets.QFileIconProvider().icon(
-            QtCore.QFileInfo(f)).pixmap(20, 20, QtGui.QIcon.Mode.Normal)
+            QtCore.QFileInfo(f)).pixmap(32, 32, QtGui.QIcon.Mode.Normal)
         pixmap.setDevicePixelRatio(self.devicePixelRatio())
         self.iconLabel.setPixmap(pixmap)
         self.icon = self.origin_file.handler.pixmap_to_b64(pixmap)
