@@ -176,6 +176,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
                 files = conn.fetch_files(
                     f"SELECT * FROM files WHERE id in ({file_ids})")
                 if not id_times:
+                    id_times = {f.id: f.vtime for f in files}
                     for conn_r in setting.visit_conns_r:
                         with conn_r.connect():
                             for f in files:
