@@ -1,9 +1,5 @@
 from datetime import datetime
-from urllib.parse import urlparse
-import webbrowser
 from ..base import BasePathHandler, File
-import requests
-from bs4 import BeautifulSoup
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QInputDialog
 
@@ -66,6 +62,7 @@ class Handler(BasePathHandler):
             return QIcon(pixmap)
 
     def open(self):
+        import webbrowser
         webbrowser.open(self.file.path)
 
     def get_widget_type(self):
@@ -86,6 +83,9 @@ class Handler(BasePathHandler):
 
 
 def get_from_url(url: str):
+    import requests
+    from bs4 import BeautifulSoup
+    from urllib.parse import urlparse
     ret = requests.get(url, timeout=2)
     soup = BeautifulSoup(ret.content)
 

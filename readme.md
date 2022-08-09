@@ -37,3 +37,8 @@ You can edit it to
 - pc name override
   
   This program 
+
+## Deployment requirements
+
+pyinstaller 
+GItPython

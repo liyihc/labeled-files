@@ -4,7 +4,6 @@ import os
 import platform
 import re
 from typing import Literal
-from urllib.parse import quote, unquote
 from PySide6 import QtWidgets, QtCore, QtGui
 from pathlib import Path
 
@@ -39,6 +38,7 @@ class VscodePath:
         return f"{self.typ}+{self.to_vscode_cli()}"
 
     def to_vscode_cli(self):
+        from urllib.parse import quote
         if self.protocol == "vscode-remote":
             assert self.remote_host
             path = f"ssh-remote+{self.remote_host}{self.path}"
@@ -48,6 +48,7 @@ class VscodePath:
 
     @classmethod
     def from_str(self, s: str):
+        from urllib.parse import unquote
         result = template.match(s)
         if not result:
             return VscodePath("file", "file", "", "")

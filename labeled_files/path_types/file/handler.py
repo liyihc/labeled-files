@@ -3,9 +3,7 @@ from datetime import datetime
 from multiprocessing import Process
 import shutil
 import subprocess
-import random
 from pathlib import Path
-from typing import is_typeddict
 from PySide6.QtCore import QFileInfo, QByteArray, QBuffer, QIODevice
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFileIconProvider, QMessageBox, QInputDialog
@@ -72,6 +70,7 @@ class Handler(BasePathHandler):
         """
             return relative, absolute
         """
+        import random
         p = Path(self.file.path)
         while True:
             target_p = setting.root_path.joinpath(

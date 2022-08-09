@@ -2,12 +2,10 @@ from __future__ import annotations
 from copy import copy
 import dataclasses
 from datetime import datetime
-import json
 
 import pathlib
 import re
 import sys
-from collections import Counter, defaultdict
 from functools import partial
 from typing import Dict, List, Tuple
 
@@ -80,6 +78,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.tags: List[TreeTag] = []
 
     def config_init(self):
+        import json
         config_path = pathlib.Path("config.json")
         if config_path.exists():
             setting.config = Config.from_json(config_path.read_text())
