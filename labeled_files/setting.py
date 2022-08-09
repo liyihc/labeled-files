@@ -106,4 +106,4 @@ class Config:
             name = self.pc_name_override
         else:
             name = platform.node()
-        return  f"VISIT_TIME_{name}.sqlite3"
+        return f"VISIT_TIME_{name}.sqlite3"
