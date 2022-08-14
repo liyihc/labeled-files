@@ -106,7 +106,7 @@ class Handler(BasePathHandler):
     def get_absolute_path(self) -> Path:
         path = Path(self.file.path)
         if path.is_absolute():
-            path = setting.convert_path(path)
+            return setting.convert_path(path)
         return setting.root_path.joinpath(path)
 
     def open(self):
@@ -146,8 +146,8 @@ class Handler(BasePathHandler):
     def actual_name_get(self) -> str:
         return Path(self.file.path).name
 
-    def custom_deplicate(self) -> File:
-        path = Path(self.file.path)
+    def custom_duplicate(self) -> File:
+        path = self.get_absolute_path()
         while True:
             text, ok = QInputDialog.getText(
                 None,

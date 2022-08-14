@@ -154,7 +154,7 @@ class BasePathHandler(abc.ABC):
         if self.support_dynamic_icon:
             return self.icon_to_pixmap(self.get_default_icon())
 
-    def custom_deplicate(self) -> File | None:
+    def custom_duplicate(self) -> File | None:
         pass
 
     def get_absolute_path(self) -> Path:

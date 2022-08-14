@@ -91,6 +91,8 @@ def get_from_url(url: str):
 
     soup = BeautifulSoup(ret.content)
     title = soup.title
+    if title is not None:
+        title = title.text
 
     icon_link = soup.find("link", rel="shortcut icon")
     if icon_link is None:

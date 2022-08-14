@@ -8,7 +8,7 @@ from typing import Callable, Dict, List, Tuple, Union
 import dataclasses
 
 SQLITE_FILES_NAME = "LABELED_FILES.sqlite3"
-VERSION = "0.5.3"
+VERSION = "0.5.4"
 
 
 import logging

@@ -491,7 +491,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
             if click_btn == cus_btn:
                 custom = True
         if custom:
-            f = origin_f.handler.custom_deplicate()
+            f = origin_f.handler.custom_duplicate()
         else:
             f = copy(origin_f)
         if f is None:
