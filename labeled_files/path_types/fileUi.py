@@ -24,7 +24,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(331, 440)
+        MainWindow.resize(343, 440)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -102,6 +102,12 @@ class Ui_MainWindow(object):
 
         self.iconDefaultPushButton = QPushButton(self.centralwidget)
         self.iconDefaultPushButton.setObjectName(u"iconDefaultPushButton")
+        sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.iconDefaultPushButton.sizePolicy().hasHeightForWidth())
+        self.iconDefaultPushButton.setSizePolicy(sizePolicy)
+        self.iconDefaultPushButton.setMaximumSize(QSize(50, 16777215))
 
         self.horizontalLayout_2.addWidget(self.iconDefaultPushButton)
 
@@ -114,6 +120,12 @@ class Ui_MainWindow(object):
         self.iconImageChoosePushButton.setObjectName(u"iconImageChoosePushButton")
 
         self.horizontalLayout_2.addWidget(self.iconImageChoosePushButton)
+
+        self.iconUrlPushButton = QPushButton(self.centralwidget)
+        self.iconUrlPushButton.setObjectName(u"iconUrlPushButton")
+        self.iconUrlPushButton.setMaximumSize(QSize(50, 16777215))
+
+        self.horizontalLayout_2.addWidget(self.iconUrlPushButton)
 
 
         self.formLayout.setLayout(6, QFormLayout.FieldRole, self.horizontalLayout_2)
@@ -155,7 +167,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 331, 22))
+        self.menubar.setGeometry(QRect(0, 0, 343, 22))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -177,9 +189,10 @@ class Ui_MainWindow(object):
         self.dateTimeEdit.setDisplayFormat(QCoreApplication.translate("MainWindow", u"yy/MM/dd HH:mm:ss", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"\u56fe\u6807", None))
         self.iconLabel.setText(QCoreApplication.translate("MainWindow", u"\u65e0\u56fe\u6807", None))
-        self.iconDefaultPushButton.setText(QCoreApplication.translate("MainWindow", u"\u9ed8\u8ba4\u56fe\u6807", None))
+        self.iconDefaultPushButton.setText(QCoreApplication.translate("MainWindow", u"\u9ed8\u8ba4", None))
         self.iconChoosePushButton.setText(QCoreApplication.translate("MainWindow", u"\u9009\u62e9\u56fe\u6807", None))
         self.iconImageChoosePushButton.setText(QCoreApplication.translate("MainWindow", u"\u9009\u62e9\u56fe\u7247", None))
+        self.iconUrlPushButton.setText(QCoreApplication.translate("MainWindow", u"\u94fe\u63a5", None))
         self.actualNameLabel.setText(QCoreApplication.translate("MainWindow", u"\u771f\u5b9e\u540d", None))
         self.cancelPushButton.setText(QCoreApplication.translate("MainWindow", u"\u53d6\u6d88", None))
         self.confirmPushButton.setText(QCoreApplication.translate("MainWindow", u"\u786e\u8ba4", None))

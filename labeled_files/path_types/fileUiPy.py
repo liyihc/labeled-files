@@ -1,17 +1,18 @@
 import abc
 import copy
+import requests
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from labeled_files.setting import setting
 from .fileUi import Ui_MainWindow
-from .base import  File
+from .base import File
 
 
 class Window(QtWidgets.QMainWindow, Ui_MainWindow):
     reshow = QtCore.Signal()
 
-    def __init__(self,  widget: 'BaseWidget', file: File) -> None:
+    def __init__(self, widget: 'BaseWidget', file: File) -> None:
         super().__init__()
         self.setupUi(self)
 
@@ -38,6 +39,7 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         self.iconDefaultPushButton.clicked.connect(self.clear_image)
         self.iconChoosePushButton.clicked.connect(self.icon_choose)
         self.iconImageChoosePushButton.clicked.connect(self.image_choose)
+        self.iconUrlPushButton.clicked.connect(self.image_url_choose)
         self.setWindowTitle(f"{file.type}：{file.name} - {' '.join(file.tags)}")
 
     def confirm(self):
@@ -90,9 +92,25 @@ class Window(QtWidgets.QMainWindow, Ui_MainWindow):
         pixmap = QtGui.QPixmap()
         pixmap.load(f)
         if pixmap.width() > pixmap.height():
-            pixmap = pixmap.scaledToWidth(20)
+            pixmap = pixmap.scaledToWidth(32)
         else:
-            pixmap = pixmap.scaledToHeight(20)
+            pixmap = pixmap.scaledToHeight(32)
+        pixmap.setDevicePixelRatio(self.devicePixelRatio())
+        self.iconLabel.setPixmap(pixmap)
+        self.icon = self.origin_file.handler.pixmap_to_b64(pixmap)
+
+    def image_url_choose(self):
+        url, ok = QtWidgets.QInputDialog.getText(
+            None, "url", "请输入图片的链接")
+        if not ok:
+            return
+
+        ret = requests.get(url)
+        if ret.status_code == 200:
+            pixmap = QtGui.QPixmap()
+            pixmap.loadFromData(ret.content)
+        else:
+            pixmap = None
         pixmap.setDevicePixelRatio(self.devicePixelRatio())
         self.iconLabel.setPixmap(pixmap)
         self.icon = self.origin_file.handler.pixmap_to_b64(pixmap)

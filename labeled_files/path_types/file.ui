@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>331</width>
+    <width>343</width>
     <height>440</height>
    </rect>
   </property>
@@ -103,8 +103,20 @@
         </item>
         <item>
          <widget class="QPushButton" name="iconDefaultPushButton">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>16777215</height>
+           </size>
+          </property>
           <property name="text">
-           <string>默认图标</string>
+           <string>默认</string>
           </property>
          </widget>
         </item>
@@ -119,6 +131,19 @@
          <widget class="QPushButton" name="iconImageChoosePushButton">
           <property name="text">
            <string>选择图片</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="iconUrlPushButton">
+          <property name="maximumSize">
+           <size>
+            <width>50</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>链接</string>
           </property>
          </widget>
         </item>
@@ -171,7 +196,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>331</width>
+     <width>343</width>
      <height>22</height>
     </rect>
    </property>
