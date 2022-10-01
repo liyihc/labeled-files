@@ -21,7 +21,9 @@ remote_icon: QtGui.QIcon = None
 
 # file+file://...
 # folder+file://...
-# workspace+remote://...
+# workspace+vscode-remote://ssh-remote+hostname/path
+# folder+vscode-remote://wsl+hostname/path
+
 
 template = re.compile(
     r"^(file|folder|workspace)\+(file|vscode-remote)://(.*)")
@@ -30,8 +32,8 @@ template = re.compile(
 @dataclasses.dataclass
 class VscodePath:
     typ: Literal["file", "folder", "workspace"]
-    protocol: Literal["file", "vscode-remote"]
-    remote_host: str
+    protocol: Literal["local", "ssh", "wsl"]
+    host: str
     path: str
 
     def to_str(self):
@@ -39,27 +41,38 @@ class VscodePath:
 
     def to_vscode_cli(self):
         from urllib.parse import quote
-        if self.protocol == "vscode-remote":
-            assert self.remote_host
-            path = f"ssh-remote+{self.remote_host}{self.path}"
-            return f"{self.protocol}://{quote(path)}"
-        if self.protocol == "file":
-            return f"{self.protocol}://{quote(self.path)}"
+        if self.protocol == "local":
+            return f"file://{quote(self.path)}"
+        assert self.host
+        if self.protocol == "ssh":
+            path = f"ssh-remote+{self.host}{self.path}"
+        elif self.protocol == "wsl":
+            path = f"wsl+{self.host}{self.path}"
+        return f"vscode-remote://{quote(path)}"
 
     @classmethod
     def from_str(self, s: str):
         from urllib.parse import unquote
         result = template.match(s)
         if not result:
-            return VscodePath("file", "file", "", "")
-        vp = VscodePath(result.group(1), result.group(2), "", "")
+            return VscodePath("file", "local", "", "")
+        vp = VscodePath(result.group(1), "", "", "")
+        is_local = result.group(2) == "file"
         path = unquote(result.group(3))
-        if vp.protocol == "vscode-remote":
-            path = path.removeprefix("ssh-remote+")
-            ind = path.find('/')
-            vp.remote_host, vp.path = path[:ind], path[ind:]
-        elif vp.protocol == "file":
+        if is_local:
+            vp.protocol = "local"
             vp.path = path
+        else:
+            if path.startswith("ssh-remote"):
+                vp.protocol = "ssh"
+                path = path.removeprefix("ssh-remote+")
+                ind = path.find('/')
+                vp.host, vp.path = path[:ind], path[ind:]
+            elif path.startswith("wsl"):
+                vp.protocol = "wsl"
+                path = path.removeprefix("wsl+")
+                ind = path.find('/')
+                vp.host, vp.path = path[:ind], path[ind:]
         return vp
 
 
@@ -109,7 +122,7 @@ class Handler(BasePathHandler):
     def open(self):
         if self.file.path:
             vp = VscodePath.from_str(self.file.path)
-            if vp.protocol == "file":
+            if vp.protocol == "local":
                 path = vp.path
                 if platform.system() == "Windows":
                     path = path.removeprefix('/')
@@ -125,7 +138,7 @@ class Handler(BasePathHandler):
                     shell=True,
                     env=setting.get_clean_env(),
                     cwd=Path.home()
-                    )
+                )
             else:  # vp.type == "workspace"
                 subprocess.Popen(
                     [str(vscode_instance_path),
@@ -133,7 +146,7 @@ class Handler(BasePathHandler):
                     shell=True,
                     env=setting.get_clean_env(),
                     cwd=Path.home()
-                    )
+                )
 
     def get_widget_type(self):
         from .vscodeUiPy import Widget
@@ -142,7 +155,7 @@ class Handler(BasePathHandler):
     def get_absolute_path(self) -> Path:
         if self.file.path:
             vp = VscodePath.from_str(self.file.path)
-            if vp.protocol == "file":
+            if vp.protocol == "local":
                 path = vp.path
                 if platform.system() == "Windows":
                     path = Path(path.removeprefix('/'))

@@ -9,7 +9,8 @@ class Widget(BaseWidget, Ui_Form):
         Ui_Form.setupUi(self, widget)
 
         self.localRadioButton.clicked.connect(self.radio_change)
-        self.remoteRadioButton.clicked.connect(self.radio_change)
+        self.sshRadioButton.clicked.connect(self.radio_change)
+        self.wslRadioButton.clicked.connect(self.radio_change)
         p = self.path
         if not p:
             return
@@ -21,35 +22,37 @@ class Widget(BaseWidget, Ui_Form):
                 self.folderRadioButton.setChecked(True)
             case "workspace":
                 self.workspaceRadioButton.setChecked(True)
-        if vp.protocol == "file":
-            self.localRadioButton.setChecked(True)
-            self.localLineEdit.setText(vp.path)
-        else:
-            self.remoteRadioButton.setChecked(True)
-            self.remoteHostLineEdit.setText(vp.remote_host)
-            self.remotePathLineEdit.setText(vp.path)
+
+        match vp.protocol:
+            case "local":
+                self.localRadioButton.setChecked(True)
+            case "ssh":
+                self.sshRadioButton.setChecked(True)
+            case "wsl":
+                self.wslRadioButton.setChecked(True)
+        self.hostLineEdit.setText(vp.host)
+        self.pathLineEdit.setText(vp.path)
 
     def radio_change(self):
         if self.localRadioButton.isChecked():
-            self.localLineEdit.setEnabled(True)
-            self.remoteHostLineEdit.setEnabled(False)
-            self.remotePathLineEdit.setEnabled(False)
+            self.hostLineEdit.setEnabled(False)
         else:
-            self.localLineEdit.setEnabled(False)
-            self.remoteHostLineEdit.setEnabled(True)
-            self.remotePathLineEdit.setEnabled(True)
+            self.hostLineEdit.setEnabled(True)
 
     def confirm_path(self):
         if self.localRadioButton.isChecked():
-            protocol = "file"
+            protocol = "local"
             host = ""
-            path = self.localLineEdit.text().replace("\\", "/")
+            path = self.pathLineEdit.text().replace("\\", "/")
             if not path.startswith("/"):
                 path = '/' + path
         else:
-            host = self.remoteHostLineEdit.text()
-            path = self.remotePathLineEdit.text()
-            protocol = "vscode-remote"
+            host = self.hostLineEdit.text()
+            path = self.pathLineEdit.text()
+            if self.sshRadioButton.isChecked():
+                protocol = "ssh"
+            elif self.wslRadioButton.isChecked():
+                protocol = "wsl"
         if self.fileRadioButton.isChecked():
             typ = "file"
         elif self.folderRadioButton.isChecked():
